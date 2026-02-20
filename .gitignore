@@ -1,0 +1,79 @@
+# ----------------------------
+# Build / generated outputs
+# ----------------------------
+output/
+**/output/
+*.log
+*.out
+
+# Figures / plots (generated)
+*.fig
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.svg
+
+# Data artifacts (generated)
+*.mat
+*.mexa64
+*.mexw64
+*.mexmaci64
+*.mex
+
+# If you want to keep some .mat files, remove the line "*.mat"
+# and instead ignore only generated mats:
+# output/**/*.mat
+
+# ----------------------------
+# MATLAB / Octave temporary files
+# ----------------------------
+*.asv
+*.autosave
+*.tmp
+*.bak
+*.swp
+*~
+
+# Octave session / workspace
+octave-workspace
+**/octave-workspace
+
+# MATLAB/Simulink code generation
+slprj/
+sccprj/
+codegen/
+**/slprj/
+**/sccprj/
+**/codegen/
+
+# MATLAB Live Scripts (optional: keep if you use them as source)
+*.mlx
+*.mlapp
+*.mlproj
+
+# ----------------------------
+# OS junk
+# ----------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ----------------------------
+# IDE / editor settings
+# ----------------------------
+.vscode/
+.idea/
+*.iml
+
+# ----------------------------
+# Optional: ignore large datasets or local scratch
+# ----------------------------
+# data/
+# scripts/local/
+# tmp/
