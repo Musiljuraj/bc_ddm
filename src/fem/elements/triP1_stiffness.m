@@ -29,16 +29,27 @@ function [Ke, area, gradphi] = triP1_stiffness(xy)
 %   3) Form Ke by area-scaled inner products of these gradients.
 %   This routine is purely local and independent of global numbering.
 
-
   % -------------------------------------------------------------------------
   % 1) INPUT CHECKS
   % -------------------------------------------------------------------------
   if nargin ~= 1
     error('triP1_stiffness: expected exactly one input argument xy (3x2).');
   end
-  if ~ismatrix(xy) || any(size(xy) ~= [3, 2])
-    error('triP1_stiffness: xy must be a 3x2 matrix of vertex coordinates.');
+
+  % % CHANGED: stronger type/shape validation (numeric, real, finite, non-logical, 3x2)
+  % Rationale:
+  %   - Reject char arrays that look like matrices (ASCII codes).
+  %   - Reject logical arrays (true/false treated as 1/0).
+  %   - Reject NaN/Inf (otherwise degeneracy check can be bypassed).
+  %   - Reject complex coordinates (not meaningful for geometry here).
+  if ~ismatrix(xy) || any(size(xy) ~= [3, 2]) || ...
+     ~isnumeric(xy) || islogical(xy) || ~isreal(xy) || any(~isfinite(xy(:)))
+    error('triP1_stiffness:invalidInput', ...
+          'xy must be a 3x2 real, finite, non-logical numeric matrix.');
   end
+
+  % % ADDED: normalize to double for consistent downstream arithmetic
+  xy = double(xy);
 
   % -------------------------------------------------------------------------
   % 2) READ VERTEX COORDINATES
@@ -57,12 +68,14 @@ function [Ke, area, gradphi] = triP1_stiffness(xy)
   paralAreaSigned = (x2 - x1)*(y3 - y1) - (x3 - x1)*(y2 - y1);
 
   % Degenerate triangle check (area ~ 0 => element is invalid for FEM).
+  % NOTE: threshold remains absolute to preserve existing behavior in your pipeline/tests.
   if abs(paralAreaSigned) < 1e-14
-    error('triP1_stiffness: degenerate triangle (area ~ 0).');
+    error('triP1_stiffness:degenerate', 'triP1_stiffness: degenerate triangle (area ~ 0).');
   end
 
   % Positive element area:
-  area = 0.5 * abs(paralAreaSigned);
+  absParalArea = abs(paralAreaSigned);     % % ADDED: reuse abs value
+  area = 0.5 * absParalArea;
 
   % -------------------------------------------------------------------------
   % 4) COMPUTE b_i, c_i COEFFICIENTS (from nodal interpolation geometry)
@@ -91,24 +104,15 @@ function [Ke, area, gradphi] = triP1_stiffness(xy)
   gradphi = [b.'; c.'] / paralAreaSigned;
 
   % -------------------------------------------------------------------------
-  % 6) DOT PRODUCTS grad(phi_i)·grad(phi_j) FOR ALL i,j (MATRIX FORM)
+  % 6) LOCAL STIFFNESS MATRIX
   % -------------------------------------------------------------------------
-  % For each i,j:
-  %   grad(phi_i) = [b_i; c_i]/paralAreaSigned
-  %   grad(phi_j) = [b_j; c_j]/paralAreaSigned
-  % so:
-  %   grad(phi_i)·grad(phi_j) = (b_i*b_j + c_i*c_j) / (paralAreaSigned^2).
+  % % CHANGED: compute Ke directly using an algebraically equivalent but slightly
+  % more robust expression (avoids squaring paralAreaSigned).
   %
-  % Build the whole 3x3 matrix of dot products efficiently:
-  %   b*b' is the matrix with entries (b_i*b_j)
-  %   c*c' is the matrix with entries (c_i*c_j)
-  G = (b*b.' + c*c.') / (paralAreaSigned*paralAreaSigned);   % G(i,j) = grad(phi_i)·grad(phi_j)
-
-  % -------------------------------------------------------------------------
-  % 7) LOCAL STIFFNESS MATRIX
-  % -------------------------------------------------------------------------
-  % Since G(i,j) is constant on K (P1 gradients are constant):
-  %   Ke(i,j) = \int_K G(i,j) dA = G(i,j) * |K|.
-  Ke = area * G;
+  % Starting from:
+  %   Ke = area * (b*b' + c*c') / (paralAreaSigned^2)
+  % and area = 0.5*abs(paralAreaSigned), we get:
+  %   Ke = (b*b' + c*c') / (2*abs(paralAreaSigned)).
+  Ke = (b*b.' + c*c.') / (2 * absParalArea);
 
 end

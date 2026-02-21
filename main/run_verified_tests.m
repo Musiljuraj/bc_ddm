@@ -24,6 +24,7 @@ function ok = run_verified_tests()
 
   tests = {
     @test_mesh_unit_square_P1
+    @test_triP1_stiffness   % ADDED: verified leaf FEM element stiffness
   };
 
   failures = {};
