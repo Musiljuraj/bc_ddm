@@ -39,9 +39,14 @@ function [p, t, bnd] = mesh_unit_square_P1(n)
   if nargin ~= 1
     error('mesh_unit_square_P1: expected exactly one input argument n.');
   end
-  if ~(isscalar(n) && n == floor(n) && n >= 1)
-    error('mesh_unit_square_P1: n must be an integer >= 1.');
+   %% CHANGED: stricter validation: reject char/logical, require finite numeric scalar integer >= 1
+  % Previously: 1x1 char (e.g. '4') and logical true could pass; Inf could pass until allocation.
+  if ~(isnumeric(n) && ~islogical(n) && isreal(n) && isscalar(n) && isfinite(n) && n == fix(n) && n >= 1)
+    error('mesh_unit_square_P1: n must be a finite numeric integer >= 1.');
   end
+
+  %% ADDED: normalize integer classes to double for consistent downstream arithmetic
+  n = double(n);
 
   %Mesh parameters
   h = 1.0 / n;          % mesh step
@@ -92,10 +97,12 @@ function [p, t, bnd] = mesh_unit_square_P1(n)
 
   x = p(:,1); y = p(:,2);
 
-  %testing whether the node is actually on boundary using tollerance (due to possible rounding errors)
-  dirichlet_nodes = find( (abs(x - 0.0) < tol) | (abs(x - 1.0) < tol) ); 
-  dirichlet_nodes = unique(dirichlet_nodes(:)); %actually not needed for my specific thesis setup, but better be safe than sorry :-)
-
+  %% CHANGED: Dirichlet nodes computed by exact index formulas (no float tolerance needed)
+  % This avoids any dependence on floating-point comparisons of coordinates.
+  left  = (0:np-1)' * np + 1;   % i=1 in each row
+  right = (1:np)'   * np;       % i=np in each row
+  dirichlet_nodes = sort([left; right]);
+  dirichlet_nodes = dirichlet_nodes(:);
 
   % Neumann edges (bottom and top boundary) as pairs of node indices 
   % (Neumann boundary conditions are stored as edges, not nodes)
