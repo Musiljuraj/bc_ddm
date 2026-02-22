@@ -50,38 +50,53 @@ function K = assemble_stiffness_P1(p, t)
   if nargin ~= 2
     error('assemble_stiffness_P1: expected inputs (p, t).');
   end
+
+  % ADDED: stronger type/real/finite checks (avoid silent ASCII/NaN/Inf issues)
+  if ~isnumeric(p) || ~isreal(p)
+    error('assemble_stiffness_P1: p must be a real numeric array.');
+  end
   if ~ismatrix(p) || size(p,2) ~= 2
     error('assemble_stiffness_P1: p must be N x 2.');
   end
+  if any(~isfinite(p(:)))
+    error('assemble_stiffness_P1: p must contain only finite values.');
+  end
+
+  % ADDED: stronger checks for t (numeric/real/finite) before index validation
+  if ~isnumeric(t) || ~isreal(t)
+    error('assemble_stiffness_P1: t must be a real numeric array.');
+  end
   if ~ismatrix(t) || size(t,2) ~= 3
     error('assemble_stiffness_P1: t must be Ne x 3.');
+  end
+  if any(~isfinite(t(:)))
+    error('assemble_stiffness_P1: t must contain only finite values.');
   end
 
   N  = size(p,1);    % total number of global degrees of freedom (nodes)
   Ne = size(t,1);    % number of triangular elements
 
   % Connectivity must consist of valid global node indices in 1..N.
-  if any(t(:) < 1) || any(t(:) > N) || any(abs(t(:) - round(t(:))) > 0)
+  % CHANGED: keep the original intent but use a clearer integer check
+  if any(t(:) ~= round(t(:))) || any(t(:) < 1) || any(t(:) > N)
     error('assemble_stiffness_P1: t must contain valid integer node indices in 1..N.');
+  end
+
+  % ADDED: reject degenerate connectivity with repeated vertices (common silent failure mode)
+  if Ne > 0
+    if any(t(:,1) == t(:,2) | t(:,1) == t(:,3) | t(:,2) == t(:,3))
+      error('assemble_stiffness_P1: each triangle must reference 3 distinct node indices.');
+    end
   end
 
   % -------------------------------------------------------------
   % 2) Allocate triplet storage (I,J,V) for sparse matrix assembly
   % -------------------------------------------------------------
   % Each triangle contributes a 3×3 local matrix Ke -> 9 scalar entries.
-  %
-  % We will store these 9 entries as 9 triplets:
-  %    (global_row, global_col, value)
-  %
-  % Over all Ne elements we therefore store exactly 9*Ne triplets.
-  %
-  % After the loop, sparse(I,J,V,N,N) will automatically sum repeated (I,J).
-  %
-  I = zeros(9*Ne, 1);   % global row indices of contributions
-  J = zeros(9*Ne, 1);   % global column indices of contributions
-  V = zeros(9*Ne, 1);   % contribution values (Ke entries)
+  I = zeros(9*Ne, 1);
+  J = zeros(9*Ne, 1);
+  V = zeros(9*Ne, 1);
 
-  % idx points to the next free block of 9 positions in (I,J,V).
   idx = 1;
 
   % -----------------------------
@@ -89,84 +104,46 @@ function K = assemble_stiffness_P1(p, t)
   % -----------------------------
   for e = 1:Ne
 
-    % -----------------------------------------------------------
-    % 3.1) Local-to-global mapping for this triangle
-    % -----------------------------------------------------------
-    % nodes are the GLOBAL node numbers of the triangle vertices:
-    %   nodes = [i1, i2, i3]
-    %
-    % In FEM theory, this represents the mapping:
-    %   local DoF 1 -> global DoF i1
-    %   local DoF 2 -> global DoF i2
-    %   local DoF 3 -> global DoF i3
-    %
     nodes = t(e,:);          % 1×3 vector of global indices
-
-    % xy are the coordinates of the triangle vertices in the same order
-    % as 'nodes'. This is the geometric data needed by the element routine.
     xy = p(nodes,:);         % 3×2
 
-    % -----------------------------------------------------------
-    % 3.2) Compute local stiffness matrix Ke for this triangle
-    % -----------------------------------------------------------
-    % Ke(m,n) = ∫_{T_e} ∇phi_m · ∇phi_n dx,  m,n = 1..3 (local basis functions)
-    %
-    % triP1_stiffness(xy) evaluates this exactly for P1 triangles.
-    %
     Ke = triP1_stiffness(xy);    % 3×3
+
+    % ADDED: sanity check the element routine output (catches accidental API drift)
+    if ~ismatrix(Ke) || any(size(Ke) ~= [3 3]) || ~isnumeric(Ke) || ~isreal(Ke)
+      error('assemble_stiffness_P1: triP1_stiffness must return a real numeric 3x3 matrix.');
+    end
+    if any(~isfinite(Ke(:)))
+      error('assemble_stiffness_P1: triP1_stiffness returned NaN/Inf (degenerate element?).');
+    end
 
     % -----------------------------------------------------------
     % 3.3) Convert the 3×3 local matrix into 9 global triplets
     % -----------------------------------------------------------
-    % Theory: 
-    %   Add Ke(m,n) into global K at position:
-    %       K( nodes(m), nodes(n) ) += Ke(m,n)
+    % Theory:
+    %   K(nodes(m), nodes(n)) += Ke(m,n),  m,n = 1..3
     %
-    % That means we need all pairs (nodes(m), nodes(n)) for m,n = 1..3.
+    % FIXED: use ndgrid (not meshgrid) so that (I,J) flattening matches Ke(:)
+    %        in column-major order:
+    %          Ke(:) = [Ke(1,1); Ke(2,1); Ke(3,1); Ke(1,2); ... ; Ke(3,3)]
+    %        With ndgrid(nodes,nodes):
+    %          ii(:) = [nodes(1); nodes(2); nodes(3); nodes(1); ...]  (row indices)
+    %          jj(:) = [nodes(1); nodes(1); nodes(1); nodes(2); ...]  (col indices)
     %
-    % We generate these 9 index pairs using meshgrid(nodes, nodes) which produces two 3×3 matrices ii and jj such that:
-    %
-    %   ii =
-    %     i1  i2  i3
-    %     i1  i2  i3
-    %     i1  i2  i3
-    %
-    %   jj =
-    %     i1  i1  i1
-    %     i2  i2  i2
-    %     i3  i3  i3
-    %
-    % The pairs (ii(m,n), jj(m,n)) then enumerate all (nodes(column), nodes(row))
-    % combinations. Then ii(:), jj(:) flatten these 3×3 matrices into 9×1
-    % vectors (column-wise).
-    %
-    % IMPORTANT:
-    % We must use the SAME flattening order for indices and Ke(:) values.
-    % Since Ke(:) also flattens column-wise, the entries match correctly:
-    %   Ke(:) = [Ke(1,1); Ke(2,1); Ke(3,1); Ke(1,2); ... ; Ke(3,3)]
-    %
-    % The corresponding indices (I,J) must follow the same order.
-    %
-    [ii, jj] = meshgrid(nodes, nodes);
+    %        This prevents accidentally assembling Ke' (transpose) due to an
+    %        index/value ordering mismatch.
+    [ii, jj] = ndgrid(nodes, nodes);  % FIXED
 
-    % Store the 9 contributions of this element into the next block of (I,J,V).
-    I(idx:idx+8) = ii(:);     % 9×1 global row indices
-    J(idx:idx+8) = jj(:);     % 9×1 global col indices
-    V(idx:idx+8) = Ke(:);     % 9×1 values
+    I(idx:idx+8) = ii(:);
+    J(idx:idx+8) = jj(:);
+    V(idx:idx+8) = Ke(:);
 
-    % Advance pointer by 9 for the next element.
     idx = idx + 9;
   end
 
   % -------------------------------------------------------------
   % 4) Build sparse global stiffness matrix K from triplets
   % -------------------------------------------------------------
-  % This call performs:
-  %   K(I(k), J(k)) += V(k)   for k = 1..9*Ne
-  %
-  % If multiple elements contribute to the same global entry (i,j),
-  % sparse() sums them automatically.
-  %
   K = sparse(I, J, V, N, N);
 
 end
