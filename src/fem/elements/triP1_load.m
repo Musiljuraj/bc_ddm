@@ -40,6 +40,12 @@ function fe = triP1_load(xy, f_handle)
     error('triP1_load: f_handle must be a function handle, e.g. @(x,y) ...');
   end
 
+  % ADDED: reject non-numeric (e.g. char), logical, complex, NaN/Inf coordinates
+  % Rationale: prevent silent coercions and NaN/Inf slipping past the area check.
+  if ~isnumeric(xy) || islogical(xy) || ~isreal(xy) || any(~isfinite(xy(:)))
+    error('triP1_load: xy must be real, finite numeric coordinates.');
+  end
+
   % -----------------------------
   % 2) Compute triangle area |T|
   % -----------------------------
@@ -61,7 +67,9 @@ function fe = triP1_load(xy, f_handle)
   paralAreaSigned = (x2 - x1)*(y3 - y1) - (x3 - x1)*(y2 - y1);
   area = 0.5 * abs(paralAreaSigned);
 
-  if area <= 0
+  % CHANGED: robustly reject NaN/Inf area as well as non-positive area
+  % (Old: if area <= 0 ...; this fails to catch area=NaN.)
+  if ~(isfinite(area) && area > 0)
     error('triP1_load: degenerate triangle (area <= 0).');
   end
 
