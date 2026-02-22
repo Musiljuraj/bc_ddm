@@ -6,10 +6,10 @@ function ok = run_verified_tests()
 
   ok = true;
 
-  % Locate project root assuming this file is in <root>/tests/
-  thisfile = mfilename('fullpath');
-  tests_dir = fileparts(thisfile);
-  root_dir  = fileparts(tests_dir);
+  % Locate project root assuming this file is in <root>/main/            % FIXED
+  thisfile  = mfilename('fullpath');                                    % CHANGED
+  main_dir  = fileparts(thisfile);                                      % ADDED
+  root_dir  = fileparts(main_dir);                                      % CHANGED
 
   oldpwd = pwd();
   c = onCleanup(@() cd(oldpwd));
@@ -24,8 +24,9 @@ function ok = run_verified_tests()
 
   tests = {
     @test_mesh_unit_square_P1
-    @test_triP1_stiffness   % ADDED: verified leaf FEM element stiffness
-    @test_triP1_load        % ADDED: verified leaf FEM element load   % ADDED
+    @test_triP1_stiffness           % verified leaf FEM element stiffness
+    @test_triP1_load                % verified leaf FEM element load      % FIXED
+    @test_assemble_load_P1          % ADDED: verified FEM assembly load
   };
 
   failures = {};

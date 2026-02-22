@@ -7,7 +7,7 @@ function F = assemble_load_P1(p, t, f_handle)
 %
 % Theoretical role:
 %   The global vector F represents the linear functional ℓ(v)=∫_Ω v f dx evaluated
-%   at basis functions (for homogeneous Neumann BCs: no boundary term). 
+%   at basis functions (for homogeneous Neumann BCs: no boundary term).
 %   Each triangle contributes a local vector f^(e) that is
 %   added to F at the global indices of the triangle vertices.
 %
@@ -48,19 +48,34 @@ function F = assemble_load_P1(p, t, f_handle)
     error('assemble_load_P1: p must be N x 2.');
   end
   if ~ismatrix(t) || size(t,2) ~= 3
-    error('assemble_load_P1: t must be Ne x 3.');
+    error('assemble_load_P1: t must be Ne x 3.'); % FIXED (was broken across lines)
   end
   if ~isa(f_handle, 'function_handle')
     error('assemble_load_P1: f_handle must be a function handle, e.g. @(x,y) ...');
   end
 
+  % Harden input types/values to prevent silent coercions (char/logical/NaN/Inf). % ADDED
+  if ~isnumeric(p) || islogical(p) || ~isreal(p) || any(~isfinite(p(:)))         % ADDED
+    error('assemble_load_P1: p must be numeric, real, finite (non-logical).');   % ADDED
+  end                                                                            % ADDED
+  if ~isnumeric(t) || islogical(t) || ~isreal(t) || any(~isfinite(t(:)))         % ADDED
+    error('assemble_load_P1: t must be numeric, real, finite (non-logical).');   % ADDED
+  end                                                                            % ADDED
+
+  % Normalize to double for consistent downstream arithmetic/indexing.            % ADDED
+  p = double(p);                                                                  % ADDED
+  t = double(t);                                                                  % ADDED
+
   N  = size(p,1);
   Ne = size(t,1);
 
   % Connectivity must be valid indices 1..N and integer-valued.
-  if any(t(:) < 1) || any(t(:) > N) || any(abs(t(:) - round(t(:))) > 0)
-    error('assemble_load_P1: t must contain valid integer node indices in 1..N.');
-  end
+  % (Use fix after finiteness checks to avoid NaN/Inf bypass.)                     % CHANGED
+  if ~isempty(t)                                                                  % ADDED
+    if any(t(:) < 1) || any(t(:) > N) || any(t(:) ~= fix(t(:)))                  % CHANGED
+      error('assemble_load_P1: t must contain valid integer node indices in 1..N.');
+    end
+  end                                                                             % ADDED
 
   % ---------------------------------------------------------
   % 2) Preallocate triplets for sparse vector assembly
