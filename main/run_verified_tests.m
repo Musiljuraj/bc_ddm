@@ -26,6 +26,7 @@ function ok = run_verified_tests()
     @test_mesh_unit_square_P1
     @test_triP1_stiffness           % verified leaf FEM element stiffness
     @test_triP1_load                % verified leaf FEM element load      % FIXED
+    @test_apply_dirichlet_elimination % ADDED: verified FEM Dirichlet restriction (BC elimination)
     @test_assemble_load_P1          % ADDED: verified FEM assembly load
   };
 

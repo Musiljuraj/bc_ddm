@@ -59,10 +59,28 @@ function [Kff, Ff, free_nodes] = apply_dirichlet_elimination(K, F, dirichlet_nod
     error('apply_dirichlet_elimination: F must be a column vector of length size(K,1).');
   end
 
+  % Type checks to avoid silent char/logical misuse.                   % ADDED
+  if ~isnumeric(K) || ~isreal(K)                                       % ADDED
+    error('apply_dirichlet_elimination: K must be a real numeric matrix.'); % ADDED
+  end                                                                  % ADDED
+  if ~isnumeric(F) || ~isreal(F)                                       % ADDED
+    error('apply_dirichlet_elimination: F must be a real numeric column vector.'); % ADDED
+  end                                                                  % ADDED
+
   N = size(K,1);
 
   % Ensure dirichlet_nodes is a vector
   dirichlet_nodes = dirichlet_nodes(:);
+
+  % Harden index input: must be numeric, real, finite.                 % FIXED
+  % (Prevents NaN/Inf being silently ignored by setdiff, and rejects    % ADDED
+  %  char arrays like '23' that could otherwise be interpreted.)        % ADDED
+  if islogical(dirichlet_nodes)                                        % ADDED
+    error('apply_dirichlet_elimination: dirichlet_nodes must be an index vector (use find(mask)).'); % ADDED
+  end                                                                  % ADDED
+  if ~isnumeric(dirichlet_nodes) || ~isreal(dirichlet_nodes) || any(~isfinite(dirichlet_nodes)) % FIXED
+    error('apply_dirichlet_elimination: dirichlet_nodes must be a real, finite numeric index vector.'); % FIXED
+  end
 
   % Check index validity: integer-valued and within 1..N
   if any(dirichlet_nodes < 1) || any(dirichlet_nodes > N) || ...
