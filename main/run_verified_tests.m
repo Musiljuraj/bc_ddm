@@ -44,7 +44,9 @@ function ok = run_verified_tests()
     @test_assemble_subdomain_matrices_P1 % verified local subdomain assembly (K,f) vs global Dirichlet-reduced system
     @test_extract_subdomain_blocks     % verified block slicing (K_II,K_Ig,K_gI,K_gg) + RHS splits + input rejection
 
-    @test_setup_local_schur            % ADDED: verified DDM local Schur setup (R_II,g; nI==0; opts default; input rejection)
+    @test_setup_local_schur            % verified DDM local Schur setup (R_II,g; nI==0; opts default; input rejection)
+
+    @test_build_product_interface      % ADDED: verified product interface space bookkeeping (prod2sub/prod2hat/hat2prod) + input rejection
   };
 
   failures = {};
