@@ -39,7 +39,8 @@ function ok = run_verified_tests()
     @test_apply_dirichlet_elimination  % verified FEM Dirichlet restriction (BC elimination)
     @test_assemble_load_P1             % verified FEM assembly load
 
-    @test_build_subdomains_structured  % ADDED: verified structured DDM partitioning + mappings
+    @test_build_subdomains_structured  % verified structured DDM partitioning + mappings
+    @test_identify_interface_dofs      % ADDED: verified DDM interface DOF bookkeeping + maps
   };
 
   failures = {};
