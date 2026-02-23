@@ -42,7 +42,9 @@ function ok = run_verified_tests()
     @test_build_subdomains_structured  % verified structured DDM partitioning + mappings
     @test_identify_interface_dofs      % verified DDM interface DOF bookkeeping + maps
 
-    @test_assemble_subdomain_matrices_P1 % ADDED: verified local subdomain assembly (K,f) vs global Dirichlet-reduced system
+    @test_assemble_subdomain_matrices_P1 % verified local subdomain assembly (K,f) vs global Dirichlet-reduced system
+
+    @test_extract_subdomain_blocks     % ADDED: verified block slicing (K_II,K_Ig,K_gI,K_gg) + RHS splits + input rejection
   };
 
   failures = {};
