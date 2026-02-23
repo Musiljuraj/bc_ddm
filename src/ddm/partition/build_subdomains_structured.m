@@ -47,19 +47,41 @@ function [sub, ddm] = build_subdomains_structured(p, t, bnd, nSubX, nSubY)
   if nargin ~= 5
     error('build_subdomains_structured: expected inputs (p,t,bnd,nSubX,nSubY).');
   end
-  if ~ismatrix(p) || size(p,2) ~= 2
-    error('build_subdomains_structured: p must be Np x 2.');
+
+  % % FIXED: reject non-numeric / complex / NaN/Inf p (prevents char->ASCII acceptance)
+  if ~(isnumeric(p) && isreal(p) && ndims(p) == 2 && size(p,2) == 2 && all(isfinite(p(:))))
+    error('build_subdomains_structured: p must be numeric, real, finite, and Np x 2.');
   end
-  if ~ismatrix(t) || size(t,2) ~= 3
-    error('build_subdomains_structured: t must be Nt x 3.');
+
+  nNodes = size(p,1);
+
+  % % FIXED: reject non-numeric / complex / NaN/Inf t; enforce Nt x 3
+  if ~(isnumeric(t) && isreal(t) && ndims(t) == 2 && size(t,2) == 3 && all(isfinite(t(:))))
+    error('build_subdomains_structured: t must be numeric, real, finite, and Nt x 3.');
   end
+  % % ADDED: t must be integer-valued indices
+  if any(t(:) ~= round(t(:)))
+    error('build_subdomains_structured: t must contain integer-valued node indices.');
+  end
+  % % ADDED: t indices must be in-range
+  if any(t(:) < 1) || any(t(:) > nNodes)
+    error('build_subdomains_structured: t contains out-of-range node indices.');
+  end
+
   if ~isstruct(bnd) || ~isfield(bnd,'dirichlet_nodes') || ~isfield(bnd,'n')
     error('build_subdomains_structured: bnd must contain fields dirichlet_nodes and n.');
   end
-  if ~(isscalar(nSubX) && nSubX == round(nSubX) && nSubX >= 1)
+
+  % % FIXED: validate bnd.n is a positive integer scalar
+  if ~(isscalar(bnd.n) && isnumeric(bnd.n) && isreal(bnd.n) && isfinite(bnd.n) && bnd.n == round(bnd.n) && bnd.n >= 1)
+    error('build_subdomains_structured: bnd.n must be a positive integer scalar.');
+  end
+
+  % % FIXED: validate nSubX/nSubY are numeric finite positive integers (not char/logical)
+  if ~(isscalar(nSubX) && isnumeric(nSubX) && isreal(nSubX) && isfinite(nSubX) && nSubX == round(nSubX) && nSubX >= 1)
     error('build_subdomains_structured: nSubX must be a positive integer.');
   end
-  if ~(isscalar(nSubY) && nSubY == round(nSubY) && nSubY >= 1)
+  if ~(isscalar(nSubY) && isnumeric(nSubY) && isreal(nSubY) && isfinite(nSubY) && nSubY == round(nSubY) && nSubY >= 1)
     error('build_subdomains_structured: nSubY must be a positive integer.');
   end
 
@@ -68,22 +90,34 @@ function [sub, ddm] = build_subdomains_structured(p, t, bnd, nSubX, nSubY)
     error('build_subdomains_structured: mesh parameter n must be divisible by (nSubX,nSubY) for an aligned structured partition.');
   end
 
-  nNodes = size(p,1);
+  % % FIXED: validate dirichlet_nodes range/type (avoid silent ignore of out-of-range)
+  dn = bnd.dirichlet_nodes(:);
+  if ~isempty(dn)
+    if ~(isnumeric(dn) && isreal(dn) && all(isfinite(dn)) && all(dn == round(dn)))
+      error('build_subdomains_structured: bnd.dirichlet_nodes must be numeric, finite, integer-valued indices.');
+    end
+    if any(dn < 1) || any(dn > nNodes)
+      error('build_subdomains_structured: bnd.dirichlet_nodes contains out-of-range node indices.');
+    end
+  end
+
   nElems = size(t,1);
 
   % -----------------------------
   % 2) Global DOF numbering after Dirichlet elimination (Chapter 2.4)
-  %  mapping from "Dirichlet-included" geomotry to "free(non-Dirichlet)" geometry
+  %  mapping from "Dirichlet-included" geometry to "free(non-Dirichlet)" geometry
   % -----------------------------
-  dir_nodes = unique(bnd.dirichlet_nodes(:));
+  dir_nodes = unique(dn);
+  dir_nodes = dir_nodes(:); % ADDED: enforce column
   all_nodes = (1:nNodes).';
   free_nodes = setdiff(all_nodes, dir_nodes);
+  free_nodes = free_nodes(:); % ADDED: enforce column
 
   node2dof = zeros(nNodes,1);
   node2dof(free_nodes) = (1:numel(free_nodes)).';
   dof2node = free_nodes;
 
-  %packing all subdomain-decomposition relevant informations into one structure
+  % packing all subdomain-decomposition relevant informations into one structure
   ddm = struct();
   ddm.nSubX = nSubX;
   ddm.nSubY = nSubY;
@@ -104,7 +138,7 @@ function [sub, ddm] = build_subdomains_structured(p, t, bnd, nSubX, nSubY)
   %
   % Elements are assigned by the location of their geometric centroid.
   %
-  tol = 1e-12;
+  % % CHANGED: removed unused tol (was dead code)
 
   % Precompute triangle centroids.
   nodes1 = t(:,1); nodes2 = t(:,2); nodes3 = t(:,3);
@@ -118,7 +152,7 @@ function [sub, ddm] = build_subdomains_structured(p, t, bnd, nSubX, nSubY)
   ix = max(1, min(nSubX, ix));
   iy = max(1, min(nSubY, iy));
 
-  elem_sub_id = ix + (iy-1)*nSubX; %flatten to column vector of the same dimension as <t>
+  elem_sub_id = ix + (iy-1)*nSubX; % flatten to nElems x 1 ids in 1..Nsub
 
   % -----------------------------
   % 4) Build per-subdomain element and node sets; build loc2glob
@@ -127,26 +161,25 @@ function [sub, ddm] = build_subdomains_structured(p, t, bnd, nSubX, nSubY)
 
   for s = 1:ddm.Nsub
 
-    % Coordinates of a subdomain in "subdomain" mesh. 
-    % We define id = ix + (iy-1)*nSubX. 
+    % Coordinates of a subdomain in "subdomain" mesh.
+    % We define id = ix + (iy-1)*nSubX.
     ix_s = mod(s-1, nSubX) + 1;
     iy_s = floor((s-1)/nSubX) + 1;
 
-    %Subdomain's corners (x,y coordinates)
+    % Subdomain's corners (x,y coordinates)
     x0 = (ix_s-1)/nSubX; x1 = ix_s/nSubX;
     y0 = (iy_s-1)/nSubY; y1 = iy_s/nSubY;
 
-    elems = find(elem_sub_id == s); %returns indexes of elements, that lays ina subdomain <s>
+    elems = find(elem_sub_id == s); % indices of elements in subdomain s
     if isempty(elems)
       error('build_subdomains_structured: subdomain %d has no elements (unexpected for aligned partition).', s);
     end
 
-    %extract all nodes (unique) that lays in a subdomain <s>
+    % extract all nodes (unique) in subdomain s
     nodes = unique(t(elems,:));
     nodes = nodes(:);
 
     % Convert nodes to global free DOFs (remove Dirichlet nodes by node2dof==0).
-    % Mapping from local indexing to global one
     dofs = node2dof(nodes);
     dofs = dofs(dofs > 0);
     dofs = unique(dofs);
@@ -160,7 +193,7 @@ function [sub, ddm] = build_subdomains_structured(p, t, bnd, nSubX, nSubY)
       glob2loc(dofs) = (1:nloc).';
     end
 
-    %pack informations about one subdomain
+    % pack information for subdomain s
     sub(s).id = s;
     sub(s).ix = ix_s;
     sub(s).iy = iy_s;
