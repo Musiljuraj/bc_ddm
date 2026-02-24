@@ -7,12 +7,12 @@ function [sub, primal] = build_primal_maps(sub, ddm, iface, prod, primal)
 %
 % Inputs:
 %   sub   : subdomain array with fields:
-%           .glob_G    : global free DOFs on interface (local order)
-%           .prod_idx  : product indices (from build_product_interface)
+%           .glob_G or .gamma_glob : global free DOFs on interface (local order)
+%           .prod_idx             : product indices (from build_product_interface)
 %   ddm   : global bookkeeping (needs .nFree)
 %   iface : interface bookkeeping (needs .glob2hat and .nHat)
 %   prod  : product bookkeeping (needs .nProd, .prod2hat)
-%   primal: primal selection (from select_primal_dofs), needs .glob_c and .hat_c
+%   primal: primal selection (from select_primal_dofs), needs .glob_c (and optionally .hat_c)
 %
 % Outputs:
 %   sub : updated with per-subdomain sets:
@@ -32,56 +32,162 @@ function [sub, primal] = build_primal_maps(sub, ddm, iface, prod, primal)
 %       .delta_idx     : list of product indices belonging to delta part
 %       .prod2delta    : (nProd x 1) map product index -> delta index (0 if primal)
 %       .nDeltaProd    : number of delta product DOFs
+%       .nC            : number of primal DOFs
+%       .hat_c         : (nC x 1) hat indices of primal DOFs (normalized/verified)
 
+  % -----------------------------
+  % Basic arity check (keep simple; Octave may throw before body on wrong arity)
+  % -----------------------------
   if nargin ~= 5
     error('build_primal_maps: expected inputs (sub, ddm, iface, prod, primal).');
   end
-  if ~isfield(ddm,'nFree')
-    error('build_primal_maps: ddm must contain nFree.');
+
+  % -----------------------------
+  % Validate required structs/fields
+  % -----------------------------
+  if ~isstruct(ddm) || ~isfield(ddm,'nFree')
+    error('build_primal_maps: ddm must be a struct containing nFree.');
   end
-  if ~isfield(iface,'nHat') || ~isfield(iface,'glob2hat')
-    error('build_primal_maps: iface must contain nHat and glob2hat.');
+  if ~isstruct(iface) || ~isfield(iface,'nHat') || ~isfield(iface,'glob2hat')
+    error('build_primal_maps: iface must be a struct containing nHat and glob2hat.');
   end
-  if ~isfield(prod,'nProd') || ~isfield(prod,'prod2hat')
-    error('build_primal_maps: prod must contain nProd and prod2hat.');
+  if ~isstruct(prod) || ~isfield(prod,'nProd') || ~isfield(prod,'prod2hat')
+    error('build_primal_maps: prod must be a struct containing nProd and prod2hat.');
   end
-  if ~isfield(primal,'glob_c')
-    error('build_primal_maps: primal must contain glob_c (run select_primal_dofs).');
+  if ~isstruct(primal) || ~isfield(primal,'glob_c')
+    error('build_primal_maps: primal must be a struct containing glob_c (run select_primal_dofs).');
   end
 
-  %sizes of all three index spaces (free DOFs, W-hat and W-prod)
-  nFree = ddm.nFree;
-  nHat  = iface.nHat;
-  nProd = prod.nProd;
+  % -----------------------------
+  % Harden sizes and index maps (fail fast on NaN/Inf/complex/non-integer/out-of-range)
+  % -----------------------------
+  nFree = local_require_int_scalar_(ddm.nFree, 'ddm.nFree');           % % ADDED
+  nHat  = local_require_int_scalar_(iface.nHat, 'iface.nHat');         % % ADDED
+  nProd = local_require_int_scalar_(prod.nProd, 'prod.nProd');         % % ADDED
 
-  % Global primal indexing.
-  glob_c = primal.glob_c(:);
+  % iface.glob2hat: should map global free dof -> hat index (0 if not on interface).
+  glob2hat = iface.glob2hat(:);                                        % % ADDED
+  local_require_int_vector_nonneg_(glob2hat, 'iface.glob2hat');        % % ADDED
+  if numel(glob2hat) ~= nFree                                           % % ADDED
+    error('build_primal_maps: iface.glob2hat must have length nFree.');
+  end
+  if any(glob2hat > nHat)                                               % % ADDED
+    error('build_primal_maps: iface.glob2hat contains values > nHat.');
+  end
+
+  % prod.prod2hat: should map product dof -> hat dof (must be in 1..nHat for existing products).
+  prod2hat = prod.prod2hat(:);                                          % % ADDED
+  local_require_int_vector_pos_(prod2hat, 'prod.prod2hat');             % % ADDED
+  if numel(prod2hat) ~= nProd                                           % % ADDED
+    error('build_primal_maps: prod.prod2hat must have length nProd.');
+  end
+  if nProd > 0 && nHat == 0                                             % % ADDED
+    error('build_primal_maps: nHat==0 but nProd>0 (inconsistent interface/product bookkeeping).');
+  end
+  if nProd > 0
+    if any(prod2hat < 1) || any(prod2hat > nHat)                        % % ADDED
+      error('build_primal_maps: prod.prod2hat must be in 1..nHat.');
+    end
+  end
+
+  % -----------------------------
+  % Validate and normalize primal selection
+  % -----------------------------
+  glob_c = primal.glob_c(:);                                            % % CHANGED (normalize to column)
+  local_require_int_vector_pos_(glob_c, 'primal.glob_c');               % % ADDED
+  if any(glob_c < 1) || any(glob_c > nFree)                             % % ADDED
+    error('build_primal_maps: primal.glob_c must be within 1..nFree.');
+  end
+  if numel(unique(glob_c)) ~= numel(glob_c)                             % % ADDED
+    error('build_primal_maps: primal.glob_c contains duplicates (invalid primal set).');
+  end
+
   nC = numel(glob_c);
+  primal.nC = nC;
 
+  if nC > 0 && nHat == 0                                                % % ADDED
+    error('build_primal_maps: non-empty primal.glob_c but iface.nHat==0.');
+  end
+
+  % Compute hat_c from glob_c using glob2hat; primal DOFs must live on the interface.
+  hat_c_from_glob = glob2hat(glob_c);                                   % % ADDED
+  if any(hat_c_from_glob == 0)                                          % % ADDED
+    error('build_primal_maps: primal.glob_c contains DOFs not present on the interface (glob2hat==0).');
+  end
+  if any(hat_c_from_glob < 1) || any(hat_c_from_glob > nHat)            % % ADDED
+    error('build_primal_maps: iface.glob2hat(primal.glob_c) out of 1..nHat.');
+  end
+  if numel(unique(hat_c_from_glob)) ~= nC                               % % ADDED
+    error('build_primal_maps: iface.glob2hat(primal.glob_c) has duplicates (inconsistent interface mapping).');
+  end
+
+  % If primal.hat_c is provided, verify it matches the implied mapping.
+  if isfield(primal,'hat_c') && ~isempty(primal.hat_c)
+    hat_c = primal.hat_c(:);                                            % % CHANGED
+    local_require_int_vector_pos_(hat_c, 'primal.hat_c');               % % ADDED
+    if numel(hat_c) ~= nC                                               % % ADDED
+      error('build_primal_maps: primal.hat_c must have same length as primal.glob_c.');
+    end
+    if any(hat_c < 1) || any(hat_c > nHat)                              % % ADDED
+      error('build_primal_maps: primal.hat_c must be within 1..nHat.');
+    end
+    if numel(unique(hat_c)) ~= nC                                       % % ADDED
+      error('build_primal_maps: primal.hat_c contains duplicates.');
+    end
+    if any(hat_c ~= hat_c_from_glob)                                    % % ADDED
+      error('build_primal_maps: primal.hat_c is inconsistent with iface.glob2hat(primal.glob_c).');
+    end
+  else
+    hat_c = hat_c_from_glob;                                            % % CHANGED
+  end
+  primal.hat_c = hat_c;                                                 % % ADDED (normalize/guarantee presence)
+
+  % -----------------------------
+  % Build global maps glob2c and hat2c
+  % -----------------------------
   glob2c = zeros(nFree, 1);
   if nC > 0
     glob2c(glob_c) = (1:nC).';
   end
-  primal.glob2c = glob2c; %primal indexing in global range (i.e. 0 if not primal, 1 .. nC if primal)
-  primal.nC = nC;
+  primal.glob2c = glob2c;
 
-  % Map assembled interface DOF -> primal id.
   hat2c = zeros(nHat, 1);
-  if isfield(primal,'hat_c') && ~isempty(primal.hat_c)
-    hat2c(primal.hat_c(:)) = (1:nC).';
-  else
-    % In case hat_c not present, compute from glob_c.
-    hat2c(iface.glob2hat(glob_c)) = (1:nC).';
+  if nC > 0
+    hat2c(hat_c) = (1:nC).';
   end
-  primal.hat2c = hat2c; %primal indexing in W-hat range (i.e. 0 if not primal, 1 .. nC if primal)
+  primal.hat2c = hat2c;
 
-  % Per-subdomain split.
+  % -----------------------------
+  % Build product primal/delta masks globally from prod2hat (not from sub loops)
+  % -----------------------------
+  if nProd == 0
+    prod_is_c = false(0,1);
+  else
+    prod_is_c = (hat2c(prod2hat) > 0);                                  % % CHANGED (more robust than marking via sub)
+  end
+  primal.prod_is_c = prod_is_c;
+  primal.prod_is_d = ~prod_is_c;
+
+  delta_idx = find(~prod_is_c);
+  primal.delta_idx = delta_idx;
+  primal.nDeltaProd = numel(delta_idx);
+
+  prod2delta = zeros(nProd, 1);
+  prod2delta(delta_idx) = (1:primal.nDeltaProd).';
+  primal.prod2delta = prod2delta;
+
+  % -----------------------------
+  % Per-subdomain split + cross-consistency checks
+  % -----------------------------
+  if ~isempty(sub) && ~isstruct(sub)                                    % % ADDED
+    error('build_primal_maps: sub must be a struct array (or empty).');
+  end
+
   nSub = numel(sub);
-  prod_is_c = false(nProd, 1);
-
   for i = 1:nSub
-    if ~isfield(sub(i),'gamma_glob')
-      % gamma_glob is identical to glob_G; allow either field name.
+
+    % Allow either gamma_glob or glob_G; standardize to gamma_glob
+    if ~isfield(sub(i),'gamma_glob')                                    % % CHANGED (keep old behavior, but validate)
       if isfield(sub(i),'glob_G')
         sub(i).gamma_glob = sub(i).glob_G(:);
       else
@@ -93,8 +199,23 @@ function [sub, primal] = build_primal_maps(sub, ddm, iface, prod, primal)
     end
 
     gG = sub(i).gamma_glob(:);
-    nG = numel(gG);
+    pidx = sub(i).prod_idx(:);
 
+    % Validate gamma_glob and prod_idx
+    local_require_int_vector_pos_(gG, sprintf('sub(%d).gamma_glob', i));     % % ADDED
+    if any(gG < 1) || any(gG > nFree)                                       % % ADDED
+      error('build_primal_maps: sub(%d).gamma_glob must be within 1..nFree.', i);
+    end
+
+    if numel(pidx) ~= numel(gG)                                             % % CHANGED (same check, earlier + stricter)
+      error('build_primal_maps: sub(%d) prod_idx length mismatch with gamma_glob.', i);
+    end
+    local_require_int_vector_pos_(pidx, sprintf('sub(%d).prod_idx', i));     % % ADDED
+    if any(pidx < 1) || any(pidx > nProd)                                   % % ADDED
+      error('build_primal_maps: sub(%d).prod_idx must be within 1..nProd.', i);
+    end
+
+    nG = numel(gG);
     if nG == 0
       sub(i).idx_c = zeros(0,1);
       sub(i).idx_d = zeros(0,1);
@@ -106,36 +227,90 @@ function [sub, primal] = build_primal_maps(sub, ddm, iface, prod, primal)
       continue;
     end
 
-    c_ids_local = glob2c(gG);          % 0 if not primal
-    is_c = (c_ids_local > 0);           %mask for local's 
-
-    sub(i).idx_c = find(is_c); % Store local positions of primal entries in the local interface vector ordering.
-    sub(i).idx_d = find(~is_c); % Store local positions of delta entries in the local interface vector ordering.
-
-    sub(i).glob_c = gG(is_c); % Store global positions of primal entries in the local interface vector ordering.
-    sub(i).glob_d = gG(~is_c); % Store global positions of delta entries in the local interface vector ordering.
-
-    sub(i).c_ids  = c_ids_local(is_c);  % Store the coarse ids corresponding to the subdomain’s primal interface DOFs,
-
-    % Split product indices accordingly.
-    pidx = sub(i).prod_idx(:);
-    if numel(pidx) ~= nG
-      error('build_primal_maps: sub(%d) prod_idx length mismatch with gamma_glob.', i);
+    % Cross-check that these local interface DOFs truly lie on the interface and match product->hat mapping.
+    hat_from_glob = glob2hat(gG);                                          % % ADDED
+    if any(hat_from_glob == 0)                                             % % ADDED
+      error('build_primal_maps: sub(%d).gamma_glob contains non-interface DOFs (glob2hat==0).', i);
     end
+    hat_from_prod = prod2hat(pidx);                                        % % ADDED
+    if any(hat_from_prod ~= hat_from_glob)                                 % % ADDED
+      error('build_primal_maps: sub(%d) inconsistent mapping: prod2hat(prod_idx) ~= glob2hat(gamma_glob).', i);
+    end
+
+    % Identify primal vs delta in this local ordering
+    c_ids_local = glob2c(gG);               % 0 if not primal
+    is_c = (c_ids_local > 0);
+
+    sub(i).idx_c = find(is_c);
+    sub(i).idx_d = find(~is_c);
+
+    sub(i).glob_c = gG(is_c);
+    sub(i).glob_d = gG(~is_c);
+
+    sub(i).c_ids  = c_ids_local(is_c);
+
     sub(i).prod_idx_c = pidx(is_c);
     sub(i).prod_idx_d = pidx(~is_c);
 
-    prod_is_c(sub(i).prod_idx_c) = true;
+    % Optional consistency: local product indices should agree with global prod_is_c
+    if any(prod_is_c(sub(i).prod_idx_c) ~= true) || any(prod_is_c(sub(i).prod_idx_d) ~= false)   % % ADDED
+      error('build_primal_maps: sub(%d) local primal/delta split inconsistent with global prod_is_c.', i);
+    end
   end
+end
 
-  primal.prod_is_c = prod_is_c;
-  primal.prod_is_d = ~prod_is_c;
+% ============================================================
+% Local validation helpers (Octave-friendly, no message matching required in tests)
+% ============================================================
 
-  delta_idx = find(~prod_is_c);
-  primal.delta_idx = delta_idx;
-  primal.nDeltaProd = numel(delta_idx);
+function n = local_require_int_scalar_(x, name)
+% % ADDED
+  if ~(isnumeric(x) && isreal(x) && isfinite(x) && isscalar(x))
+    error('build_primal_maps: %s must be a real finite numeric scalar.', name);
+  end
+  if x ~= round(x)
+    error('build_primal_maps: %s must be integer-valued.', name);
+  end
+  if x < 0
+    error('build_primal_maps: %s must be nonnegative.', name);
+  end
+  n = x;
+end
 
-  prod2delta = zeros(nProd, 1);
-  prod2delta(delta_idx) = (1:primal.nDeltaProd).';
-  primal.prod2delta = prod2delta;
+function local_require_int_vector_nonneg_(v, name)
+% % ADDED
+  if isempty(v)
+    return;
+  end
+  if ~(isnumeric(v) && isreal(v))
+    error('build_primal_maps: %s must be real numeric.', name);
+  end
+  if any(~isfinite(v(:)))
+    error('build_primal_maps: %s must be finite.', name);
+  end
+  if any(v(:) ~= round(v(:)))
+    error('build_primal_maps: %s must be integer-valued.', name);
+  end
+  if any(v(:) < 0)
+    error('build_primal_maps: %s must be >= 0.', name);
+  end
+end
+
+function local_require_int_vector_pos_(v, name)
+% % ADDED
+  if isempty(v)
+    return;
+  end
+  if ~(isnumeric(v) && isreal(v))
+    error('build_primal_maps: %s must be real numeric.', name);
+  end
+  if any(~isfinite(v(:)))
+    error('build_primal_maps: %s must be finite.', name);
+  end
+  if any(v(:) ~= round(v(:)))
+    error('build_primal_maps: %s must be integer-valued.', name);
+  end
+  if any(v(:) <= 0)
+    error('build_primal_maps: %s must be positive (>=1).', name);
+  end
 end

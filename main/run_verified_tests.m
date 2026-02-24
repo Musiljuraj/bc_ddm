@@ -48,7 +48,9 @@ function ok = run_verified_tests()
 
     @test_build_product_interface      % verified product interface space bookkeeping (prod2sub/prod2hat/hat2prod) + input rejection
 
-    @test_select_primal_dofs           % ADDED: verified primal (corner) interface DOF selection + input contract
+    @test_select_primal_dofs           % verified primal (corner) interface DOF selection + input contract
+    @test_build_primal_maps            % CHANGED: add after verification (maps/splits + hardened contract)
+
   };
 
   failures = {};
