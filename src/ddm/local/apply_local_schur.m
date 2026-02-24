@@ -1,44 +1,73 @@
 function y = apply_local_schur(si, x)
 %APPLY_LOCAL_SCHUR  Matrix-free application of a local Schur complement y = S^(i) x.
 %
-% Link to thesis:
-%   Chapter 3.2.2–3.2.3, equation (3.29).
-%
-% Given the subdomain block matrices and an interior solver for K_II, compute:
 %   y = (K_gg - K_gI * K_II^{-1} * K_Ig) * x
 %
-% Inputs:
-%   si : subdomain struct with fields K_Ig, K_gI, K_gg, R_II (from setup_local_schur).
-%   x  : interface vector (length nG for this subdomain).
+% si must contain:
+%   K_gg (nG x nG), K_Ig (nI x nG), K_gI (nG x nI), R_II (nI x nI or [])
 %
-% Output:
-%   y  : interface vector y = S^(i) x.
-%
-% Notes:
-% - If the subdomain has no interior DOFs (nI=0), then S^(i) = K_gg.
-% - This routine is the core local operator used for S = diag(S_i) on the product interface.
+% x may be nG x 1 or nG x k.
 
   if nargin ~= 2
-    error('apply_local_schur: expected inputs (si, x).');
+    error('apply_local_schur:BadNargin', 'Expected inputs (si, x).');
   end
-  if ~isfield(si,'K_gg') || ~isfield(si,'K_Ig') || ~isfield(si,'K_gI')
-    error('apply_local_schur: si must contain K_gg, K_Ig, K_gI.');
+  if ~isstruct(si)
+    error('apply_local_schur:BadInput', 'si must be a struct.');
   end
-  if ~isfield(si,'R_II')
-    error('apply_local_schur: si must contain R_II (run setup_local_schur first).');
+  req = {'K_gg','K_Ig','K_gI','R_II'};
+  for k = 1:numel(req)
+    if ~isfield(si, req{k})
+      error('apply_local_schur:MissingField', 'si must contain field "%s".', req{k});
+    end
+  end
+  if ~isnumeric(x)
+    error('apply_local_schur:BadInput', 'x must be numeric.');
   end
 
-  nG = size(si.K_gg, 1);
-  if size(x,1) ~= nG || size(x,2) ~= 1
-    error('apply_local_schur: x must be a column vector of length %d.', nG);
+  Kgg = si.K_gg; KIg = si.K_Ig; KgI = si.K_gI; R = si.R_II;
+
+  % Basic block dimension checks
+  nG = size(Kgg,1);
+  if size(Kgg,2) ~= nG
+    error('apply_local_schur:DimMismatch', 'K_gg must be square (nG x nG).');
+  end
+  if size(KIg,2) ~= nG
+    error('apply_local_schur:DimMismatch', 'K_Ig must have size (nI x nG).');
+  end
+  nI = size(KIg,1);
+  if size(KgI,1) ~= nG || size(KgI,2) ~= nI
+    error('apply_local_schur:DimMismatch', 'K_gI must have size (nG x nI).');
   end
 
-  if isempty(si.R_II)
-    y = si.K_gg * x;
+  % x shape: allow multiple RHS
+  if size(x,1) ~= nG
+    error('apply_local_schur:DimMismatch', 'x must have %d rows.', nG);
+  end
+
+  if isempty(R)
+    if nI ~= 0
+      error('apply_local_schur:InconsistentState', ...
+            'R_II is empty but nI=%d (expected nI=0).', nI);
+    end
+    y = Kgg * x;
     return;
   end
 
-  tmp = si.K_Ig * x;                 % nI x 1
-  z = si.R_II \ (si.R_II' \ tmp);    % nI x 1
-  y   = si.K_gg * x - si.K_gI * z;   % nG x 1
+  if size(R,1) ~= nI || size(R,2) ~= nI
+    error('apply_local_schur:DimMismatch', 'R_II must be size (nI x nI).');
+  end
+
+  % Apply Schur action
+  tmp = KIg * x;
+
+  % Robust to whether R is upper or lower triangular
+  if istriu(R)
+    z = R \ (R' \ tmp);      % for K_II = R'*R
+  elseif istril(R)
+    z = R' \ (R \ tmp);      % for K_II = R*R'
+  else
+    error('apply_local_schur:BadFactor', 'R_II must be triangular (upper or lower Cholesky factor).');
+  end
+
+  y = Kgg * x - KgI * z;
 end

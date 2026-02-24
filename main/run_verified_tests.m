@@ -45,6 +45,7 @@ function ok = run_verified_tests()
     @test_extract_subdomain_blocks     % verified block slicing (K_II,K_Ig,K_gI,K_gg) + RHS splits + input rejection
 
     @test_setup_local_schur            % verified DDM local Schur setup (R_II,g; nI==0; opts default; input rejection)
+    @test_apply_local_schur            % verified local Schur apply (matrix-free) vs explicit Schur + contract checks
 
     @test_build_product_interface      % verified product interface space bookkeeping (prod2sub/prod2hat/hat2prod) + input rejection
 
