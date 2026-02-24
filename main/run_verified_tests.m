@@ -48,9 +48,10 @@ function ok = run_verified_tests()
     @test_apply_local_schur            % verified local Schur apply (matrix-free) vs explicit Schur + contract checks
 
     @test_build_product_interface      % verified product interface space bookkeeping (prod2sub/prod2hat/hat2prod) + input rejection
+    @test_apply_blockdiag_S            % ADDED verified block-diagonal Schur apply in product space + input rejection
 
     @test_select_primal_dofs           % verified primal (corner) interface DOF selection + input contract
-    @test_build_primal_maps            % CHANGED: add after verification (maps/splits + hardened contract)
+    @test_build_primal_maps            % add after verification (maps/splits + hardened contract)
 
   };
 

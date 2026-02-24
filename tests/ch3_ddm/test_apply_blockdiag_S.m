@@ -9,15 +9,7 @@ function test_apply_blockdiag_S()
 
   fprintf('Running test_apply_blockdiag_S...\n');
 
-  setup_paths();
-  %addpath('../../src/fem/mesh');
-  %addpath('../../src/fem/elements');
-  %addpath('../../src/fem/assembly');
-  %addpath('../../src/fem/bc');
-
-  %addpath('../../src/ddm/partition');
-  %addpath('../../src/ddm/interface');
-  %addpath('../../src/ddm/local');
+  ensure_project_paths_();  % % CHANGED: use same path setup pattern as test_apply_local_schur.m
 
   tol = 1e-10;
 
@@ -114,5 +106,38 @@ function test_apply_blockdiag_S()
   fprintf('PASS: test_apply_blockdiag_S\n');
 end
 
-% Allow running as a script:
-test_apply_blockdiag_S();
+% =========================
+% Helpers
+% =========================
+
+function ensure_project_paths_()  % % ADDED
+  persistent did;
+  if ~isempty(did) && did
+    return;
+  end
+
+  if exist('setup_paths', 'file') == 2
+    setup_paths();
+    sp = which('setup_paths');
+    if ~isempty(sp)
+      maindir = fileparts(sp);
+      rootdir = fileparts(maindir);
+      addpath(genpath(fullfile(rootdir, 'tests')));
+    end
+    did = true;
+    return;
+  end
+
+  thisdir  = fileparts(mfilename('fullpath'));
+  testsdir = fileparts(thisdir);
+  rootdir  = fileparts(testsdir);
+  maindir  = fullfile(rootdir, 'main');
+
+  addpath(maindir);
+  setup_paths();
+  addpath(genpath(fullfile(rootdir, 'tests')));
+
+  did = true;
+end
+
+% % FIXED: removed auto-execution "test_apply_blockdiag_S();" at EOF
