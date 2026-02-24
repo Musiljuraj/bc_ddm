@@ -48,7 +48,7 @@ function ok = run_verified_tests()
     @test_apply_local_schur            % verified local Schur apply (matrix-free) vs explicit Schur + contract checks
 
     @test_build_product_interface      % verified product interface space bookkeeping (prod2sub/prod2hat/hat2prod) + input rejection
-    @test_build_jump_operator_B        % ADDED: verified jump-operator assembly + input rejection
+    @test_build_jump_operator_B        % verified jump-operator assembly + input rejection
     @test_multiplicity_scaling         % verified multiplicity scaling weights + input rejection
     @test_pcg_wrap                     % verified pcg_wrap contract + solve invariants + input rejection
     @test_rng_deterministic            % verified deterministic RNG seeding + input rejection
@@ -62,8 +62,10 @@ function ok = run_verified_tests()
     @test_setup_fetidp                 % verified FETI-DP setup invariants + input rejection
     @test_applyA_lambda                % verified FETI-DP operator apply wiring + strict input rejection
     @test_applyM_lambda                % verified FETI-DP M_lambda apply (reference equivalence + invariances + input rejection)
-    @test_solve_tildeS                 % ADDED: verified solve_tildeS (coarse+delta solve, defaults, linearity, negatives)
-    @test_solve_fetidp                 % ADDED: verified solve_fetidp smoke + residual consistency
+    @test_solve_tildeS                 % verified solve_tildeS (coarse+delta solve, defaults, linearity, negatives)
+    @test_solve_fetidp                 % verified solve_fetidp smoke + residual consistency
+    @test_reconstruct_fetidp_solution  % ADDED: verified reconstruct_fetidp_solution smoke + contracts
+    
   };
 
   failures = {};
