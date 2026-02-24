@@ -4,6 +4,7 @@ function test_ddm_block_integration()
 % Verifies, for several structured decompositions:
 %   1) Sum of lifted local subdomain matrices reproduces global Dirichlet-reduced system (ddm ordering).
 %   2) Assembled-interface Schur complement (from local Schur) matches global Schur computed directly.
+%   2b) Matrix-free apply consistency (apply_local_schur + apply_blockdiag_S exercised via run_ddm_block_case diagnostics).
 %   3) Product interface + primal selection + primal maps are globally consistent.
 %   4) A small negative/fault-injection case throws as expected.
 %
@@ -11,7 +12,7 @@ function test_ddm_block_integration()
 
   ensure_project_paths_();
 
-  f = @(x,y) 2.0 + x - 3*y;  % deterministic RHS (no manufactured solution needed here)
+  f = @(x,y) 2.0 + x - 3*y;  % deterministic RHS
 
   cases = { ...
     struct('n', 12, 'nSubX', 3, 'nSubY', 2), ...
@@ -38,14 +39,23 @@ function test_ddm_block_integration()
     % 2) Schur complement consistency (strongest intermediate check)
     % ----------------------------
     assert(d.rel_sym_S < 1e-12, sprintf('Assembled Schur not symmetric enough (case %d): rel=%g', ci, d.rel_sym_S));
-
-    % Relative tolerances: should be near roundoff; keep conservative but strict.
     assert(d.rel_S < 1e-10, sprintf('Schur mismatch too large (case %d): rel=%g', ci, d.rel_S));
     assert(d.rel_g < 1e-10, sprintf('Reduced RHS mismatch too large (case %d): rel=%g', ci, d.rel_g));
 
     % ----------------------------
-    % 3) Primal selection count (matches your unit-test formula)
-    % Dirichlet at x=0 and x=1 => no free nodes there => corners on those lines excluded
+    % 2b) Matrix-free apply checks (exercise apply_local_schur/apply_blockdiag_S)
+    % ----------------------------
+    assert(isfield(d,'rel_local_apply_max'), sprintf('Missing rel_local_apply_max diagnostics (case %d).', ci));
+    assert(d.rel_local_apply_max < 1e-12, sprintf('Local apply_local_schur mismatch too large (case %d): rel=%g', ci, d.rel_local_apply_max));
+
+    assert(isfield(d,'rel_S_apply_hat'), sprintf('Missing rel_S_apply_hat diagnostics (case %d).', ci));
+    assert(d.rel_S_apply_hat < 1e-10, sprintf('Hat-space matrix-free apply mismatch too large (case %d): rel=%g', ci, d.rel_S_apply_hat));
+
+    assert(isfield(d,'rel_S_apply_prod'), sprintf('Missing rel_S_apply_prod diagnostics (case %d).', ci));
+    assert(d.rel_S_apply_prod < 1e-10, sprintf('Product-space apply_blockdiag_S mismatch too large (case %d): rel=%g', ci, d.rel_S_apply_prod));
+
+    % ----------------------------
+    % 3) Primal selection count
     % expected = (nSubX-1)*(nSubY+1)
     % ----------------------------
     expected_nC = (cfg.nSubX - 1) * (cfg.nSubY + 1);
@@ -100,7 +110,6 @@ end
 % ========================================================================
 
 function ensure_project_paths_()
-  % Same “run anywhere” style used in your unit tests.
   persistent did;
   if ~isempty(did) && did
     return;
@@ -118,9 +127,9 @@ function ensure_project_paths_()
     return;
   end
 
-  thisdir  = fileparts(mfilename('fullpath'));   % .../tests/ch3_ddm
-  testsdir = fileparts(thisdir);                 % .../tests
-  rootdir  = fileparts(testsdir);                % project root
+  thisdir  = fileparts(mfilename('fullpath'));
+  testsdir = fileparts(thisdir);
+  rootdir  = fileparts(testsdir);
   maindir  = fullfile(rootdir, 'main');
 
   addpath(maindir);
@@ -132,7 +141,6 @@ end
 
 function [sub, ddm] = mutate_duplicate_elems_(sub, ddm)
   %#ok<INUSD>
-  % Make a guaranteed duplicate in sub(1).elems (if possible)
   if ~isempty(sub) && isfield(sub(1),'elems') && numel(sub(1).elems) >= 1
     sub(1).elems(end+1,1) = sub(1).elems(1);
   end

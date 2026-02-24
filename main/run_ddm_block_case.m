@@ -158,6 +158,46 @@ function out = run_ddm_block_case(cfg)
   % (C) symmetry of assembled Schur
   diag.rel_sym_S = norm(S_hat - S_hat.', 'fro') / max(1, norm(S_hat, 'fro'));
 
+  % (D) Matrix-free apply checks (exercise apply_local_schur/apply_blockdiag_S)
+  % Local apply_local_schur vs explicit local S (max over subdomains with nG>0)
+  rel_local = 0;
+  for i = 1:ddm.Nsub
+    nG = size(sub(i).K_gg, 1);
+    if nG <= 0, continue; end
+    xloc = (1:nG).' / max(1, nG);
+    y_mf  = apply_local_schur(sub(i), xloc);
+    y_ref = sub(i).S * xloc;
+    rel_i = norm(y_mf - y_ref, 2) / max(1, norm(y_ref, 2));
+    rel_local = max(rel_local, rel_i);
+  end
+  diag.rel_local_apply_max = rel_local;
+
+  % Assembled hat-space apply: compare explicit S_hat*u to matrix-free scatter-add
+  u_hat = (1:nHat).' / max(1, nHat);
+  y_hat_exp = S_hat * u_hat;
+  y_hat_mf  = zeros(nHat, 1);
+  for i = 1:ddm.Nsub
+    h = sub(i).gamma_hat(:);
+    if isempty(h), continue; end
+    y_hat_mf(h) = y_hat_mf(h) + apply_local_schur(sub(i), u_hat(h));
+  end
+  diag.rel_S_apply_hat = norm(y_hat_mf - y_hat_exp, 2) / max(1, norm(y_hat_exp, 2));
+
+  % Product-space block-diagonal apply: apply_blockdiag_S vs explicit local S blocks
+  if prod.nProd == 0
+    diag.rel_S_apply_prod = 0;
+  else
+    w_prod = (1:prod.nProd).' / max(1, prod.nProd);
+    y_prod = apply_blockdiag_S(sub, w_prod);
+    y_prod_ref = zeros(prod.nProd, 1);
+    for i = 1:ddm.Nsub
+      idxp = sub(i).prod_idx(:);
+      if isempty(idxp), continue; end
+      y_prod_ref(idxp) = sub(i).S * w_prod(idxp);
+    end
+    diag.rel_S_apply_prod = norm(y_prod - y_prod_ref, 2) / max(1, norm(y_prod_ref, 2));
+  end
+
   % Pack output
   out = struct();
   out.p = p; out.t = t; out.bnd = bnd;
