@@ -58,7 +58,9 @@ function ok = run_verified_tests()
 
     @test_build_problem_data           % verified end-to-end problem-data builder (tiny DDM config + input rejection)
 
-    @test_setup_fetidp                 % ADDED: verified FETI-DP setup invariants + input rejection
+    @test_setup_fetidp                 % verified FETI-DP setup invariants + input rejection
+    @test_applyA_lambda                % ADDED: verified FETI-DP operator apply wiring + strict input rejection
+    @test_applyM_lambda                % ADDED: verified FETI-DP M_lambda apply (reference equivalence + invariances + input rejection)
   };
 
   failures = {};
