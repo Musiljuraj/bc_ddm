@@ -46,7 +46,9 @@ function ok = run_verified_tests()
 
     @test_setup_local_schur            % verified DDM local Schur setup (R_II,g; nI==0; opts default; input rejection)
 
-    @test_build_product_interface      % ADDED: verified product interface space bookkeeping (prod2sub/prod2hat/hat2prod) + input rejection
+    @test_build_product_interface      % verified product interface space bookkeeping (prod2sub/prod2hat/hat2prod) + input rejection
+
+    @test_select_primal_dofs           % ADDED: verified primal (corner) interface DOF selection + input contract
   };
 
   failures = {};
