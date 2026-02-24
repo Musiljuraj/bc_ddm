@@ -56,7 +56,9 @@ function ok = run_verified_tests()
     @test_select_primal_dofs           % verified primal (corner) interface DOF selection + input contract
     @test_build_primal_maps            % add after verification (maps/splits + hardened contract)
 
-    @test_build_problem_data           % ADDED: verified end-to-end problem-data builder (tiny DDM config + input rejection)
+    @test_build_problem_data           % verified end-to-end problem-data builder (tiny DDM config + input rejection)
+
+    @test_setup_fetidp                 % ADDED: verified FETI-DP setup invariants + input rejection
   };
 
   failures = {};
