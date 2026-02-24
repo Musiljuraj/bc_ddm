@@ -50,11 +50,13 @@ function ok = run_verified_tests()
     @test_build_product_interface      % verified product interface space bookkeeping (prod2sub/prod2hat/hat2prod) + input rejection
     @test_multiplicity_scaling         % verified multiplicity scaling weights + input rejection
     @test_pcg_wrap                     % verified pcg_wrap contract + solve invariants + input rejection
-    @test_rng_deterministic            % ADDED: verified deterministic RNG seeding + input rejection
+    @test_rng_deterministic            % verified deterministic RNG seeding + input rejection
     @test_apply_blockdiag_S            % verified block-diagonal Schur apply in product space + input rejection
 
     @test_select_primal_dofs           % verified primal (corner) interface DOF selection + input contract
     @test_build_primal_maps            % add after verification (maps/splits + hardened contract)
+
+    @test_build_problem_data           % ADDED: verified end-to-end problem-data builder (tiny DDM config + input rejection)
   };
 
   failures = {};
