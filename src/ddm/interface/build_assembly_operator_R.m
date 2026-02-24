@@ -25,16 +25,36 @@ function R = build_assembly_operator_R(prod)
   nProd = prod.nProd;
   nHat  = prod.nHat;
 
-  %The code builds triplets (I,J,V) and calls Octave’s sparse(I,J,V,m,n) constructor:
-  I = (1:nProd).'; %create row indices for each product DOF row (1..nProd).
-  J = prod.prod2hat(:); %column index per row, telling which hat DOF each product DOF copies from
+  % Validate nProd / nHat early for clearer errors
+  if ~isnumeric(nProd) || ~isscalar(nProd) || ~isfinite(nProd) || nProd < 0 || nProd ~= fix(nProd)
+    error('build_assembly_operator_R: prod.nProd must be a finite nonnegative integer scalar.');
+  end
+  if ~isnumeric(nHat) || ~isscalar(nHat) || ~isfinite(nHat) || nHat < 0 || nHat ~= fix(nHat)
+    error('build_assembly_operator_R: prod.nHat must be a finite nonnegative integer scalar.');
+  end
 
+  % Build triplets (I,J,V) for sparse(I,J,V,m,n)
+  I = (1:nProd).';         % row indices (1..nProd)
+  J = prod.prod2hat(:);    % column index per row
+
+  if ~isnumeric(J)
+    error('build_assembly_operator_R: prod.prod2hat must be numeric.');
+  end
   if numel(J) ~= nProd
     error('build_assembly_operator_R: prod.prod2hat has wrong length.');
   end
+
+  % Harden: catch NaN/Inf and non-integers explicitly (these may otherwise slip past comparisons)
+  if any(~isfinite(J))
+    error('build_assembly_operator_R: prod.prod2hat contains NaN/Inf.');
+  end
+  if any(J ~= fix(J))
+    error('build_assembly_operator_R: prod.prod2hat must contain integer indices.');
+  end
+
   if any(J < 1) || any(J > nHat)
     error('build_assembly_operator_R: prod.prod2hat contains out-of-range hat indices.');
   end
 
-  R = sparse(I, J, ones(nProd,1), nProd, nHat); %build the 0/1 distribution matrix with one “1” per product DOF row.
+  R = sparse(I, J, ones(nProd,1), nProd, nHat);
 end

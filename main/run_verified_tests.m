@@ -48,6 +48,7 @@ function ok = run_verified_tests()
     @test_apply_local_schur            % verified local Schur apply (matrix-free) vs explicit Schur + contract checks
 
     @test_build_product_interface      % verified product interface space bookkeeping (prod2sub/prod2hat/hat2prod) + input rejection
+    @test_build_assembly_operator_R    % verified assembly operator R (hat->prod) + input rejection
     @test_build_jump_operator_B        % verified jump-operator assembly + input rejection
     @test_multiplicity_scaling         % verified multiplicity scaling weights + input rejection
     @test_pcg_wrap                     % verified pcg_wrap contract + solve invariants + input rejection
