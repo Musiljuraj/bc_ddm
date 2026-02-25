@@ -69,8 +69,9 @@ function ok = run_verified_tests()
     @test_solve_tildeS                 % verified solve_tildeS (coarse+delta solve, defaults, linearity, negatives)
     @test_solve_fetidp                 % verified solve_fetidp smoke + residual consistency
     @test_solve_bddc                   % ADDED: verified solve_bddc smoke + residual consistency
-    
+
     @test_reconstruct_fetidp_solution  % ADDED: verified reconstruct_fetidp_solution smoke + contracts
+    @test_reconstruct_bddc_solution
     
   };
 
