@@ -63,7 +63,9 @@ function ok = run_verified_tests()
     @test_setup_fetidp                 % verified FETI-DP setup invariants + input rejection
     @test_setup_bddc                   % verified BDDC setup invariants + input rejection
     @test_applyA_lambda                % verified FETI-DP operator apply wiring + strict input rejection
+    @test_applyA_hat                   % verified BDDC operator apply wiring + strict input rejection
     @test_applyM_lambda                % verified FETI-DP M_lambda apply (reference equivalence + invariances + input rejection)
+    @test_applyM_bddc                  % verified BDDC M_bddc apply (reference equivalence + invariances + input rejection)
     @test_solve_tildeS                 % verified solve_tildeS (coarse+delta solve, defaults, linearity, negatives)
     @test_solve_fetidp                 % verified solve_fetidp smoke + residual consistency
     @test_reconstruct_fetidp_solution  % ADDED: verified reconstruct_fetidp_solution smoke + contracts
