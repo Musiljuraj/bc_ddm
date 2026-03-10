@@ -1,20 +1,7 @@
 function [Ke, area, gradphi] = triP1_stiffness(xy)
-%TRIP1_STIFFNESS  Local stiffness matrix for Poisson problem on one triangular P1 element.
-%
-% Link to thesis:
-%   Chapter 2.3.2 (Element stiffness matrix) and the element-wise decomposition
-%   of K_ij = ∫_Ω ∇φ_i·∇φ_j dx.
-%
-% Theoretical role:
-%   For each triangle T_e with local P1 basis functions {ϕ_1,ϕ_2,ϕ_3},
-%     K^(e)_{ij} = ∫_{T_e} ∇ϕ_i · ∇ϕ_j dx.
-%   This is the standard local (3x3) stiffness matrix for the bilinear form
-%       a(u,v) = ∫_Ω  ∇(u)∇(v) dx
-%   corresponding to the Poisson operator -Delta.
-%   Since ϕ_i is affine on T_e, ∇ϕ_i is constant on T_e, so the integral reduces
-%   to area(T_e) times the dot product of constant gradients.
-%
-%       Ke(i,j) = ( ∇φ_i·∇φ_j ) * |T_e|
+%TRIP1_STIFFNESS Assemble the local P1 stiffness matrix on one triangle.
+% Thesis link: Chapter 3.3.2 (element-wise stiffness contribution).
+% The routine returns the 3x3 local matrix for one triangular P1 element.
 %
 %  Inputs:
 %   xy      : 3×2 matrix -  coordinates of the triangle vertices.
@@ -22,12 +9,6 @@ function [Ke, area, gradphi] = triP1_stiffness(xy)
 %   Ke      : 3×3 local stiffness matrix for T_e.
 %   area    : |T_e|, triangle area (positive)
 %   gradphi : gradients of local basis functions (constant on the element).
-%
-% Implementation outline:
-%   1) Compute the triangle area from the vertex geometry.
-%   2) Construct the constant gradients of the local barycentric P1 basis.
-%   3) Form Ke by area-scaled inner products of these gradients.
-%   This routine is purely local and independent of global numbering.
 
   % -------------------------------------------------------------------------
   % 1) INPUT CHECKS

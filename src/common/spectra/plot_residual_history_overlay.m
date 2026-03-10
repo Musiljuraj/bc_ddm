@@ -3,11 +3,9 @@
 % ============================================================
 function fig_path = plot_residual_history_overlay( ...
     resvec_feti, resvec_bddc, case_id, outdir, opts)
-%PLOT_RESIDUAL_HISTORY_OVERLAY  Plot PCG residual histories and export to PDF.
-%
-% Usage:
-%   fig_path = plot_residual_history_overlay(res_f, res_b, case_id, outdir);
-%   fig_path = plot_residual_history_overlay(res_f, res_b, case_id, outdir, opts);
+%PLOT_RESIDUAL_HISTORY_OVERLAY Plot overlaid PCG residual histories.
+% Thesis link: Chapter 6.4 (comparison of sequential convergence histories).
+% Produces the residual-history figure used to compare FETI-DP and BDDC.
 %
 % Inputs:
 %   resvec_feti : residual history for FETI-DP (vector)

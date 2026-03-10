@@ -1,12 +1,8 @@
 function y = apply_local_schur(si, x)
-%APPLY_LOCAL_SCHUR  Matrix-free application of a local Schur complement y = S^(i) x.
-%
-%   y = (K_gg - K_gI * K_II^{-1} * K_Ig) * x
-%
-% si must contain:
-%   K_gg (nG x nG), K_Ig (nI x nG), K_gI (nG x nI), R_II (nI x nI or [])
-%
-% x may be nG x 1 or nG x k.
+%APPLY_LOCAL_SCHUR Apply one local Schur complement in matrix-free form.
+% Thesis link: Chapter 4.2.3 (local Schur complement operator).
+% For a given subdomain block structure, the routine computes `y = S^(i) x`
+% without forming `S^(i)` explicitly.
 
   if nargin ~= 2
     error('apply_local_schur:BadNargin', 'Expected inputs (si, x).');

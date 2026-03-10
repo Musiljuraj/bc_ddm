@@ -2,14 +2,10 @@
 % File: src/bddc/solve/reconstruct_bddc_solution.m
 % ============================================================
 function out = reconstruct_bddc_solution(u_hat, data)
-%RECONSTRUCT_BDDC_SOLUTION  Reconstruct global free-DOF solution from u_hat.
-%
-%   out = reconstruct_bddc_solution(u_hat, data)
-%
-% Given the hat-space interface solution u_hat, compute:
-%   - product interface trace w = R*u_hat
-%   - subdomain interior solutions via local back-substitution
-%   - averaged global free-DOF solution u_free
+%RECONSTRUCT_BDDC_SOLUTION Reconstruct the global free-DOF solution after BDDC.
+% Thesis link: Chapter 5.4 (postprocessing after the assembled-interface solve).
+% The routine rebuilds product/interface values, solves for local interiors,
+% and assembles the final global free-node vector.
 %
 % Inputs:
 %   u_hat : hat-space vector (nHat x 1)
@@ -27,7 +23,7 @@ function out = reconstruct_bddc_solution(u_hat, data)
     error('reconstruct_bddc_solution: data.bddc.R missing (run setup_bddc first).');
   end
 
-  %% HARDENING CHANGE: lightweight input validation (types + required top-level fields)
+  %%   lightweight input validation (types + required top-level fields)
   if ~isnumeric(u_hat) || ~(isvector(u_hat) || isempty(u_hat))
     error('reconstruct_bddc_solution: u_hat must be a numeric vector.');
   end
@@ -47,7 +43,7 @@ function out = reconstruct_bddc_solution(u_hat, data)
 
   R = data.bddc.R;
 
-  %% HARDENING CHANGE: explicit size check for R*u_hat (clearer than generic dim mismatch)
+  %%   explicit size check for R*u_hat (clearer than generic dim mismatch)
   if ~isnumeric(R) || ndims(R) ~= 2
     error('reconstruct_bddc_solution: data.bddc.R must be a numeric 2D matrix.');
   end
@@ -65,7 +61,7 @@ function out = reconstruct_bddc_solution(u_hat, data)
   cnt = zeros(nFree, 1);
 
   for i = 1:nSub
-    %% HARDENING CHANGE: required per-subdomain fields (fail fast with clear message)
+    %%   required per-subdomain fields (fail fast with clear message)
     req = {'prod_idx','K_II','R_II','f_I','K_Ig','glob_I','gamma_glob'};
     for k = 1:numel(req)
       if ~isfield(sub(i), req{k})
@@ -76,7 +72,7 @@ function out = reconstruct_bddc_solution(u_hat, data)
     % Interface values for subdomain i (in local gamma ordering).
     pidx = sub(i).prod_idx(:);
 
-    %% HARDENING CHANGE: validate prod_idx (integer, in range)
+    %%   validate prod_idx (integer, in range)
     if ~isempty(pidx)
       if ~isnumeric(pidx) || any(~isfinite(pidx)) || any(abs(pidx - round(pidx)) > 0) || any(pidx < 1)
         error('reconstruct_bddc_solution: sub(%d).prod_idx must be a vector of positive integers.', i);
@@ -107,12 +103,12 @@ function out = reconstruct_bddc_solution(u_hat, data)
     Iglob = sub(i).glob_I(:);
     Gglob = sub(i).gamma_glob(:);
 
-    %% HARDENING CHANGE: gamma_glob must match the local gamma length (if provided)
+    %%   gamma_glob must match the local gamma length (if provided)
     if ~isempty(Gglob) && numel(Gglob) ~= nG
       error('reconstruct_bddc_solution: sub(%d).gamma_glob length must match numel(sub(%d).prod_idx).', i, i);
     end
 
-    %% HARDENING CHANGE: validate global index vectors (integer, in range)
+    %%   validate global index vectors (integer, in range)
     if ~isempty(Iglob)
       if ~isnumeric(Iglob) || any(~isfinite(Iglob)) || any(abs(Iglob - round(Iglob)) > 0) || any(Iglob < 1) || any(Iglob > nFree)
         error('reconstruct_bddc_solution: sub(%d).glob_I must be integer indices in [1..nFree].', i);
@@ -129,7 +125,7 @@ function out = reconstruct_bddc_solution(u_hat, data)
       fI  = sub(i).f_I;
       KIg = sub(i).K_Ig;
 
-      %% HARDENING CHANGE: local dimension consistency checks (cheap)
+      %%   local dimension consistency checks (cheap)
       if ~isnumeric(RII) || ~isequal(size(RII), [nI nI])
         error('reconstruct_bddc_solution: sub(%d).R_II must be %dx%d.', i, nI, nI);
       end
@@ -145,7 +141,7 @@ function out = reconstruct_bddc_solution(u_hat, data)
 
       rhsI = fI(:) - KIg * w_g;
 
-      %% HARDENING CHANGE: catch solve failures with subdomain context
+      %%   catch solve failures with subdomain context
       try
         uI = RII \ (RII' \ rhsI);
       catch ME
@@ -155,7 +151,7 @@ function out = reconstruct_bddc_solution(u_hat, data)
       uI = zeros(0,1);
     end
 
-    %% HARDENING CHANGE: ensure scatter sizes match computed vectors
+    %%   ensure scatter sizes match computed vectors
     if ~isempty(Iglob) && numel(uI) ~= numel(Iglob)
       error('reconstruct_bddc_solution: sub(%d) interior vector size mismatch (uI vs glob_I).', i);
     end
@@ -176,7 +172,7 @@ function out = reconstruct_bddc_solution(u_hat, data)
   end
 
   if any(cnt == 0)
-    %% HARDENING CHANGE: slightly clearer diagnostic
+    %%   slightly clearer diagnostic
     z = find(cnt == 0);
     error('reconstruct_bddc_solution: some free DOFs received zero contributions (e.g. first is %d).', z(1));
   end

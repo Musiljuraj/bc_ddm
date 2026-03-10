@@ -2,11 +2,10 @@
 % File: src/common/spectra/export_ch6_table_tex.m
 % ============================================================
 function export_ch6_table_tex(outs, tex_path, opts)
-%EXPORT_CH6_TABLE_TEX  Export Chapter 6 summary table (LaTeX) from case outputs.
-%
-% Usage:
-%   export_ch6_table_tex(outs, tex_path);
-%   export_ch6_table_tex(outs, tex_path, opts);
+%EXPORT_CH6_TABLE_TEX Export the Chapter 6 summary table to LaTeX.
+% Thesis link: Chapter 6.4 (cross-case summary of spectra and PCG results).
+% The routine writes a compact table with the main indicators for FETI-DP
+% and BDDC in the presentation order used in the thesis.
 %
 % Inputs:
 %   outs     : either a cell array {out1,out2,...} or a struct array [out1,out2,...]
@@ -24,10 +23,6 @@ function export_ch6_table_tex(outs, tex_path, opts)
 %
 % Output:
 %   Writes tex_path. Intended for inclusion in thesis via \input{...}.
-%
-% Notes:
-% - FETI-DP is always reported first, BDDC second (thesis rule).
-% - If spectra are skipped for a method, spectral columns are printed as '--'.
 
   % ----------------------------
   % Input validation + defaults

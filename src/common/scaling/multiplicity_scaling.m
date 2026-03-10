@@ -1,10 +1,8 @@
 function omega = multiplicity_scaling(prod)
-%MULTIPLICITY_SCALING  Compute multiplicity scaling weights on product interface DOFs.
-%
-%   omega = multiplicity_scaling(prod)
-%
-% For each assembled interface DOF (hat-index), there are k product copies.
-% This returns product-space weights omega such that each copy gets weight 1/k.
+%MULTIPLICITY_SCALING Compute multiplicity weights on product-space DOFs.
+% Thesis link: Chapter 4.3 and Chapter 5.4 (scaled averaging on the interface).
+% Each duplicate of one assembled interface DOF receives weight `1/k`,
+% where `k` is the number of local copies.
 %
 % Required inputs:
 %   prod.nProd
@@ -23,7 +21,7 @@ function omega = multiplicity_scaling(prod)
   nProd = prod.nProd;
   hat2prod = prod.hat2prod;
 
-  % CHANGED: stronger validation of nProd (numeric, real, finite, integer >= 0; reject logical)
+  % stronger validation of nProd (numeric, real, finite, integer >= 0; reject logical)
   if ~(isnumeric(nProd) && ~islogical(nProd) && isreal(nProd) && isfinite(nProd) && ...
        isscalar(nProd) && nProd == floor(nProd) && nProd >= 0)
     error('multiplicity_scaling: prod.nProd must be a real, finite integer >= 0.');
@@ -35,7 +33,7 @@ function omega = multiplicity_scaling(prod)
 
   omega = zeros(nProd, 1);
 
-  % ADDED: track coverage to detect overlaps and to make the final check explicit
+  % track coverage to detect overlaps and to make the final check explicit
   seen = false(nProd, 1);  % seen(p)=true iff product index p assigned already
 
   for h = 1:numel(hat2prod)
@@ -45,7 +43,7 @@ function omega = multiplicity_scaling(prod)
       continue;
     end
 
-    % ADDED: validate hat2prod{h} element type/shape
+    %validate hat2prod{h} element type/shape
     if ~(isnumeric(idx) && ~islogical(idx) && isreal(idx))
       error('multiplicity_scaling: hat2prod{%d} must be a real, non-logical numeric vector of indices.', h);
     end
@@ -58,32 +56,32 @@ function omega = multiplicity_scaling(prod)
 
     idx = idx(:);
 
-    % ADDED: integer-valued index requirement
+    %integer-valued index requirement
     if any(idx ~= floor(idx))
       error('multiplicity_scaling: hat2prod{%d} must contain integer-valued indices.', h);
     end
 
-    % ADDED: range check (1..nProd)
+    % range check (1..nProd)
     if any(idx < 1) || any(idx > nProd)
       error('multiplicity_scaling: hat2prod{%d} contains indices outside 1..nProd.', h);
     end
 
-    % ADDED: reject duplicates within a hat group
+    %reject duplicates within a hat group
     if numel(unique(idx)) ~= numel(idx)
       error('multiplicity_scaling: hat2prod{%d} contains duplicate indices.', h);
     end
 
-    % FIXED: reject overlaps across hat groups (previously silent overwrite)
+    % reject overlaps across hat groups (previously silent overwrite)
     if any(seen(idx))
       error('multiplicity_scaling: a product index appears in multiple hat groups (overlap).');
     end
 
     k = numel(idx);
     omega(idx) = 1.0 / k;
-    seen(idx) = true;  % ADDED
+    seen(idx) = true; 
   end
 
-  % CHANGED: coverage check expressed via seen mask (equivalent to omega==0 under our new rules)
+  % coverage check expressed via seen mask (equivalent to omega==0 under our new rules)
   if any(~seen)
     error('multiplicity_scaling: some product indices received zero weight (check prod.hat2prod).');
   end

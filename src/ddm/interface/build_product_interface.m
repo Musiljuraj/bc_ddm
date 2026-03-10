@@ -1,13 +1,8 @@
 function [sub, prod] = build_product_interface(sub, iface)
-%BUILD_PRODUCT_INTERFACE  Construct product (duplicated) interface indexing and bookkeeping.
-%
-% Link to thesis:
-%   Chapter 3.3.2 (product interface space), equations (3.45)–(3.47).
-%
-% This routine constructs the product interface space W = Π_i W_i by assigning
-% a unique "product" index to every local interface DOF on every subdomain.
-% Physical interface DOFs (assembled interface space \hat{W}) are represented
-% by iface.glob2hat.
+%BUILD_PRODUCT_INTERFACE Construct product-space interface indexing.
+% Thesis link: Chapter 4.3.2 (product / duplicated interface space).
+% Each local interface DOF receives its own product-space index, while
+% assembled-interface relations are kept through auxiliary maps.
 %
 % Inputs:
 %   sub   : subdomain array with field .glob_G (global free DOFs on interface)
@@ -26,29 +21,29 @@ function [sub, prod] = build_product_interface(sub, iface)
 %     .prod2hat  : (nProd x 1) assembled interface index for each product DOF
 %     .hat2prod  : cell (nHat x 1): hat2prod{k} lists product copies of hat DOF k
 
-  % CHANGED: keep strict arg-count check (also supports unit test)
+  % keep strict arg-count check (also supports unit test)
   if nargin ~= 2
     error('build_product_interface: expected inputs (sub, iface).');
   end
 
-  % CHANGED: validate sub container
+  % validate sub container
   if ~isstruct(sub)
     error('build_product_interface: sub must be a struct array.');
   end
 
-  % CHANGED: validate iface required fields early
+  % validate iface required fields early
   if ~isstruct(iface) || ~isfield(iface,'glob2hat') || ~isfield(iface,'nHat')
     error('build_product_interface: iface must contain glob2hat and nHat (run identify_interface_dofs).');
   end
 
-  % CHANGED: validate iface.nHat (numeric, real, finite, integer scalar, >=0)
+  % validate iface.nHat (numeric, real, finite, integer scalar, >=0)
   nHat = iface.nHat;
   if ~isnumeric(nHat) || ~isreal(nHat) || ~isfinite(nHat) || ~isscalar(nHat) || (nHat ~= fix(nHat)) || (nHat < 0)
     error('build_product_interface: iface.nHat must be a real, finite, integer scalar >= 0.');
   end
   nHat = double(nHat); % normalize type for downstream
 
-  % CHANGED: validate iface.glob2hat (numeric, real, finite, vector; reject char/logical)
+  % validate iface.glob2hat (numeric, real, finite, vector; reject char/logical)
   g2h = iface.glob2hat;
   if ischar(g2h) || islogical(g2h) || (exist('isstring','file')==2 && isstring(g2h))
     error('build_product_interface: iface.glob2hat must be numeric (char/logical/string not allowed).');
@@ -70,7 +65,7 @@ function [sub, prod] = build_product_interface(sub, iface)
   g2h = g2h(:); % treat as column
   mapLen = numel(g2h);
 
-  % CHANGED: if nHat==0, mapping must not claim any assembled DOF
+  %  if nHat==0, mapping must not claim any assembled DOF
   if nHat == 0 && ~isempty(g2h) && any(g2h(:) ~= 0)
     error('build_product_interface: iface.nHat==0 but iface.glob2hat contains nonzero entries.');
   end
@@ -84,7 +79,7 @@ function [sub, prod] = build_product_interface(sub, iface)
       error('build_product_interface: sub(%d) missing glob_G (run identify_interface_dofs).', i);
     end
 
-    % CHANGED: validate sub(i).glob_G upfront (type + shape), reject char/logical
+    %validate sub(i).glob_G upfront (type + shape), reject char/logical
     gG = sub(i).glob_G;
     if ischar(gG) || islogical(gG) || (exist('isstring','file')==2 && isstring(gG))
       error('build_product_interface: sub(%d).glob_G must be numeric (char/logical/string not allowed).', i);
@@ -132,7 +127,7 @@ function [sub, prod] = build_product_interface(sub, iface)
       continue;
     end
 
-    % CHANGED: robust mapping with additional sanity checks
+    %robust mapping with additional sanity checks
     hat = g2h(gG); % map global free DOFs -> assembled interface indices
 
     if any(hat == 0)
@@ -142,7 +137,7 @@ function [sub, prod] = build_product_interface(sub, iface)
       error('build_product_interface: sub(%d) maps to invalid hat indices (outside 1..nHat).', i);
     end
     if numel(unique(hat)) ~= numel(hat)
-      % CHANGED: disallow duplicate hat mapping within one subdomain (typically caused by bad glob_G)
+      %disallow duplicate hat mapping within one subdomain (typically caused by bad glob_G)
       error('build_product_interface: sub(%d) maps multiple glob_G entries to the same hat index (duplicate hat).', i);
     end
 

@@ -2,25 +2,10 @@
 % File: src/common/spectra/full_spectrum_precond.m
 % ============================================================
 function spec = full_spectrum_precond(applyA, applyMinv, n, opts)
-%FULL_SPECTRUM_PRECOND  Full spectrum of preconditioned SPD operator (small cases).
-%
-%   spec = full_spectrum_precond(applyA, applyMinv, n)
-%   spec = full_spectrum_precond(applyA, applyMinv, n, opts)
-%
-% Chapter 6 (spectral experiments):
-%   We compare spectra of the PCG-seen (preconditioned) operators for FETI-DP
-%   and BDDC. In the implementation, both A and M^{-1} are available only as
-%   matrix-free actions on vectors:
-%       y = applyA(x)      computes A*x
-%       z = applyMinv(r)   computes M^{-1}*r
-%
-%   For sufficiently small n we assemble explicit matrices A and Minv by
-%   basis-vector probing (assemble_from_apply) and compute the full spectrum
-%   using a numerically robust symmetric formulation:
-%
-%     Minv = R^T R   (Cholesky factorization of Minv, with R upper triangular)
-%     K    = R * A * R^T
-%     eig(K) equals eig(M^{-1}A) in exact arithmetic, while K is symmetric.
+%FULL_SPECTRUM_PRECOND Compute the full spectrum of a preconditioned SPD operator.
+% Thesis link: Chapter 6.3 (explicit spectral analysis from operator actions).
+% The routine works with matrices assembled from callbacks and returns the
+% eigenvalues and derived spectral indicators used in Chapter 6.
 %
 % Inputs:
 %   applyA     : function handle, y = applyA(x), x,y length n.

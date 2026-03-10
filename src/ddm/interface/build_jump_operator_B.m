@@ -1,14 +1,8 @@
 function [B, meta] = build_jump_operator_B(prod)
-%BUILD_JUMP_OPERATOR_B  Construct the jump/constraint operator B enforcing continuity of duplicated interface DOFs.
-%
-% Link to thesis:
-%   Chapter 3.3.3 (jump operator), equations (3.42)–(3.44).
-%
-% In the product interface space W, each physical interface DOF (assembled index "hat")
-% may have k>=2 local copies (product indices). Continuity requires that all copies match.
-% We enforce this by constraints:
-%   w(p1) - w(pj) = 0,  j=2..k,
-% where p1 is a chosen reference copy.
+%BUILD_JUMP_OPERATOR_B Build the jump operator on the product interface space.
+% Thesis link: Chapter 4.3.3 (continuity constraints and jump operator).
+% The matrix `B` enforces equality of duplicated interface DOFs across
+% neighboring subdomains.
 %
 % Inputs:
 %   prod : product-space bookkeeping from build_product_interface (needs .hat2prod and .nProd/.nHat).
@@ -84,9 +78,9 @@ function [B, meta] = build_jump_operator_B(prod)
     end
   end
 
-  % Internal consistency (cheap, avoids silent size mismatch).                   % ADDED
+  % Internal consistency (cheap, avoids silent size mismatch).                  
   if row ~= (m + 1) || ptr ~= (2*m + 1)
-    error('build_jump_operator_B:internal', 'Internal assembly mismatch (row/ptr counters).'); % ADDED
+    error('build_jump_operator_B:internal', 'Internal assembly mismatch (row/ptr counters).'); 
   end
 
   B = sparse(I, J, V, m, nProd);
@@ -99,7 +93,7 @@ end
 
 % -------------------------------------------------------------------------
 function copies = validate_copies_(copies, h, nProd)
-%validate_copies_  Minimal validation for a hat->prod index list.            % ADDED
+%validate_copies_  Minimal validation for a hat->prod index list.            
 %
 % Requirements (solid standard):
 %   - nonempty numeric vector
@@ -108,24 +102,24 @@ function copies = validate_copies_(copies, h, nProd)
 %   - no duplicates (avoids zero constraint rows)
 
   if isempty(copies)
-    error('build_jump_operator_B:emptyCopies', 'hat2prod{%d} is empty.', h); % ADDED
+    error('build_jump_operator_B:emptyCopies', 'hat2prod{%d} is empty.', h); 
   end
   if ~isnumeric(copies)
-    error('build_jump_operator_B:badCopiesType', 'hat2prod{%d} must be numeric indices.', h); % ADDED
+    error('build_jump_operator_B:badCopiesType', 'hat2prod{%d} must be numeric indices.', h); 
   end
 
   copies = copies(:);
 
   if ~isreal(copies) || any(~isfinite(copies))
-    error('build_jump_operator_B:badCopiesValues', 'hat2prod{%d} must be real and finite.', h); % ADDED
+    error('build_jump_operator_B:badCopiesValues', 'hat2prod{%d} must be real and finite.', h); 
   end
   if any(copies ~= round(copies))
-    error('build_jump_operator_B:badCopiesInt', 'hat2prod{%d} must be integer-valued.', h); % ADDED
+    error('build_jump_operator_B:badCopiesInt', 'hat2prod{%d} must be integer-valued.', h);
   end
   if any(copies < 1) || any(copies > nProd)
-    error('build_jump_operator_B:badCopiesRange', 'hat2prod{%d} contains indices out of range 1..nProd.', h); % ADDED
+    error('build_jump_operator_B:badCopiesRange', 'hat2prod{%d} contains indices out of range 1..nProd.', h);
   end
   if numel(unique(copies)) ~= numel(copies)
-    error('build_jump_operator_B:dupCopies', 'hat2prod{%d} contains duplicate indices.', h); % ADDED
+    error('build_jump_operator_B:dupCopies', 'hat2prod{%d} contains duplicate indices.', h); 
   end
 end

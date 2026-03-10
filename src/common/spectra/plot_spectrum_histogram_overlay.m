@@ -2,11 +2,10 @@
 % File: src/common/spectra/plot_spectrum_histogram_overlay.m
 % ============================================================
 function fig_path = plot_spectrum_histogram_overlay(eig_feti, eig_bddc, case_id, outdir, opts)
-%PLOT_SPECTRUM_HISTOGRAM_OVERLAY  Compare eigenvalue distributions (FETI-DP vs BDDC) via histogram.
-%
-% Usage:
-%   fig_path = plot_spectrum_histogram_overlay(eig_feti, eig_bddc, case_id, outdir);
-%   fig_path = plot_spectrum_histogram_overlay(eig_feti, eig_bddc, case_id, outdir, opts);
+%PLOT_SPECTRUM_HISTOGRAM_OVERLAY Plot an overlaid histogram of eigenvalues.
+% Thesis link: Chapter 6.4 (spectral distribution comparison).
+% Produces a compact visual comparison of the eigenvalue distributions of
+% the preconditioned FETI-DP and BDDC operators.;
 %
 % Inputs:
 %   eig_feti : eigenvalues (vector) for FETI-DP
@@ -33,11 +32,6 @@ function fig_path = plot_spectrum_histogram_overlay(eig_feti, eig_bddc, case_id,
 %
 % Output:
 %   fig_path : full path to the saved PDF figure.
-%
-% Notes:
-% - We use identical bin edges for both methods (required for fair comparison).
-% - Tiny nonpositive eigenvalues (roundoff artifacts) are discarded for the
-%   histogram and the discarded counts are reported in the title.
 
   % ----------------------------
   % Input validation + defaults

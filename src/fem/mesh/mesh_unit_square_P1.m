@@ -1,18 +1,8 @@
 function [p, t, bnd] = mesh_unit_square_P1(n)
-%MESH_UNIT_SQUARE_P1  Uniform P1 triangulation of the unit square [0,1]x[0,1].
-%
-% Link to thesis:
-%   Chapter 2.2 (Discrete approximation space on the square domain).
-%   Provides the geometric mesh (nodes + triangles) on which the nodal P1 basis
-%   functions (hat functions) are defined.
-%
-% Theoretical role:
-%   The discrete space V_n is constructed on a triangulation of Ω = (0,1)^2.
-%   Each global degree of freedom corresponds to one mesh node, and each
-%   triangular element carries three local P1 basis functions associated with
-%   its vertices.
-%
-%   [p, t, bnd] = mesh_unit_square_P1(n)
+%MESH_UNIT_SQUARE_P1 Generate the structured P1 mesh on the unit square.
+% Thesis link: Chapter 3.2 and 3.4 (discrete space and boundary nodes).
+% Returns node coordinates, triangle connectivity, and boundary-node sets
+% used later in assembly and Dirichlet elimination.
 %
 %   Input:
 %   n  - number of steps (uniformly distanced nodes) per axis (integer, n >= 1)
@@ -27,13 +17,7 @@ function [p, t, bnd] = mesh_unit_square_P1(n)
 %          .neumann_edges   : array of node index pairs (optional use) which correspond to edges with Neumann BC
 %          .h               : mesh size (1/n)
 %          .n               : steps per axis
-%
-% Implementation outline:
-%   1) Create a uniform (n+1)×(n+1) grid on [0,1]×[0,1] and number nodes
-%      consistently (left-to-right, bottom-to-top).
-%   2) Split each grid square into two triangles with consistent orientation.
-%   3) Identify boundary nodes (Dirichlet) and edges (Neumann) and return them in a small structure for
-%      later restriction/elimination of Dirichlet DOFs.
+
 
   % check correct input
   if nargin ~= 1

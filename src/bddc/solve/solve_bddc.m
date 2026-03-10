@@ -2,14 +2,10 @@
 % File: src/bddc/solve/solve_bddc.m
 % ============================================================
 function out = solve_bddc(data, opts)
-%SOLVE_BDDC  Solve the BDDC hat-space interface problem by PCG.
-%
-%   out = solve_bddc(data, opts)
-%
-% Solves:
-%   A_hat u_hat = f_hat,
-%   A_hat = R^T S R,  f_hat = R^T g,
-% with baseline BDDC preconditioner.
+%SOLVE_BDDC Run the sequential BDDC solve by PCG in assembled interface space.
+% Thesis link: Chapter 5.4 (BDDC solver workflow).
+% The routine forms the assembled right-hand side, runs `pcg_wrap` with
+% `applyA_hat` and `applyM_bddc`, and stores convergence diagnostics.
 %
 % Inputs:
 %   data : struct from build_problem_data(...) extended by setup_bddc(...)
@@ -22,12 +18,12 @@ function out = solve_bddc(data, opts)
 %   out.stats : pcg_wrap stats
 %   out.w_prod: product-space interface trace R*u_hat
 
-  %% HARDENING CHANGE: basic arg-count validation
+  %%   basic arg-count validation
   if nargin < 1 || nargin > 2
     error('solve_bddc:bad_nargin', 'solve_bddc expects 1 or 2 input arguments.');
   end
 
-  %% HARDENING CHANGE: validate data/opts types and defaults
+  %%   validate data/opts types and defaults
   if ~isstruct(data)
     error('solve_bddc:bad_data', 'data must be a struct (from setup_bddc).');
   end
@@ -41,7 +37,7 @@ function out = solve_bddc(data, opts)
   if ~isfield(opts,'tol');   opts.tol = 1e-8; end
   if ~isfield(opts,'maxit'); opts.maxit = 500; end
 
-  %% HARDENING CHANGE: validate opts fields
+  %%   validate opts fields
   if ~isscalar(opts.tol) || ~isnumeric(opts.tol) || ~(opts.tol > 0) || ~isfinite(opts.tol)
     error('solve_bddc:bad_tol', 'opts.tol must be a positive finite scalar.');
   end
@@ -50,7 +46,7 @@ function out = solve_bddc(data, opts)
   end
   opts.maxit = floor(opts.maxit);
 
-  %% HARDENING CHANGE: required fields
+  %%   required fields
   if ~isfield(data,'bddc') || ~isstruct(data.bddc)
     error('solve_bddc:missing_bddc', 'data.bddc missing (run setup_bddc first).');
   end
@@ -63,7 +59,7 @@ function out = solve_bddc(data, opts)
 
   R = data.bddc.R;
 
-  %% HARDENING CHANGE: validate R
+  %%   validate R
   if ~(isnumeric(R) || issparse(R)) || ndims(R) ~= 2
     error('solve_bddc:bad_R', 'data.bddc.R must be a numeric 2D matrix (dense or sparse).');
   end
@@ -76,7 +72,7 @@ function out = solve_bddc(data, opts)
   end
   g_prod = g_prod(:); % column
 
-  %% HARDENING CHANGE: dimension checks
+  %%   dimension checks
   if numel(g_prod) ~= nProd
     error('solve_bddc:dim_mismatch', ...
       'Size mismatch: numel(data.bddc.g_prod)=%d must equal size(R,1)=%d.', numel(g_prod), nProd);
@@ -86,7 +82,7 @@ function out = solve_bddc(data, opts)
   f_hat = R' * g_prod;
   f_hat = f_hat(:); % column (deterministic shape)
 
-  %% HARDENING CHANGE: handle empty hat-space cleanly
+  %%   handle empty hat-space cleanly
   if nHat == 0
     out = struct();
     out.u_hat  = zeros(0,1);
@@ -95,7 +91,7 @@ function out = solve_bddc(data, opts)
     return;
   end
 
-  %% HARDENING CHANGE: dependency existence checks for clearer errors
+  %%   dependency existence checks for clearer errors
   if exist('applyA_hat','file') ~= 2
     error('solve_bddc:missing_dep', 'applyA_hat not found on path.');
   end
@@ -109,17 +105,17 @@ function out = solve_bddc(data, opts)
   applyA = @(x) applyA_hat(x, data);
   applyM = @(r) applyM_bddc(r, data);
 
-  %% HARDENING CHANGE: deterministic x0 shape
+  %%   deterministic x0 shape
   x0 = zeros(nHat,1);
 
-  %% HARDENING CHANGE: wrap pcg call to improve failure message context
+  %%   wrap pcg call to improve failure message context
   try
     [u_hat, stats] = pcg_wrap(applyA, f_hat, opts.tol, opts.maxit, applyM, x0);
   catch err
     error('solve_bddc:pcg_failed', 'pcg_wrap failed in solve_bddc: %s', err.message);
   end
 
-  %% HARDENING CHANGE: normalize returned shape and validate length
+  %%   normalize returned shape and validate length
   u_hat = u_hat(:);
   if numel(u_hat) ~= nHat
     error('solve_bddc:bad_u_hat', ...

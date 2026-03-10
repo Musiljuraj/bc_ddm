@@ -1,17 +1,8 @@
 function K = assemble_stiffness_P1(p, t)
-%ASSEMBLE_STIFFNESS_P1  Assemble the global P1 stiffness matrix on a triangulation.
-%
-% Link to thesis:
-%   Chapter 2.3.3 (Stiffness matrix assembly) and the element-wise representation
-%   K_ij = Σ_e ∫_{T_e} ∇φ_i·∇φ_j dx.
-%
-% Theoretical role:
-%   This function constructs the global stiffness matrix K that appears in the
-%   discrete Ritz / FEM system
-%   The global stiffness matrix K represents the bilinear form A(·,·) restricted
-%   to the discrete space V_n. Each element contributes a 3×3 matrix K^(e), and
-%   shared nodes imply that global entries receive summed contributions from
-%   multiple elements.
+%ASSEMBLE_STIFFNESS_P1 Assemble the global P1 stiffness matrix on a triangulation.
+% Thesis link: Chapter 3.3 (element stiffness and global assembly).
+% The matrix is built from local `triP1_stiffness` contributions using
+% sparse triplet assembly and is returned before Dirichlet elimination.
 %
 % Inputs:
 %   p : N×2 of global node coordinates.
@@ -26,23 +17,6 @@ function K = assemble_stiffness_P1(p, t)
 %   3) Map local indices {1,2,3} to global node indices t(e,:) and add all
 %      9 contributions into the global sparse matrix.
 %   The assembly realizes the local-to-global summation described in the thesis.
-
-% IMPORTANT NOTE: SPARSE ASSEMBLY VIA TRIPLETS (I,J,V)
-% --------------------------------------------------------------
-% The stiffness matrix K is sparse because each basis function phi_i has local
-% support: it only overlaps with basis functions associated with neighboring
-% nodes. Therefore, each row of K has only O(1) nonzeros independent of N.
-%
-% Building sparse matrices efficiently in Octave/Matlab is done by providing
-% triplets (I,J,V) and calling:
-%
-%       K = sparse(I, J, V, N, N)
-%
-% Semantics:
-%   For each k, the value V(k) is ADDED to K(I(k), J(k)).
-%   If indices repeat (which they will in FEM assembly), sparse() sums them.
-%
-% -------------------------------------------------------------------------
 
   % -----------------------------
   % 1) Basic input validation

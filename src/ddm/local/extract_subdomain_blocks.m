@@ -1,21 +1,13 @@
 function sub = extract_subdomain_blocks(sub)
-%EXTRACT_SUBDOMAIN_BLOCKS  Extract interior/interface blocks of local subdomain systems.
-%
-% Link to thesis:
-%   Chapter 3.2.1 (block decomposition), equations (3.14)–(3.16).
-%
-% This routine assumes that each subdomain struct contains:
-%   - K : local stiffness matrix on all local free DOFs
-%   - f : local load vector
-%   - dofs_I, dofs_G : local index sets (interior / interface)
+%EXTRACT_SUBDOMAIN_BLOCKS Split each local system into interior/interface blocks.
+% Thesis link: Chapter 4.2.1 (block decomposition of local subdomain systems).
+% The routine extracts `K_II`, `K_Ig`, `K_gI`, `K_gg` and the matching RHS parts.
 %
 % Output:
 %   sub(i) is enriched with:
 %     K_II, K_Ig, K_gI, K_gg
 %     f_I,  f_g
-%
-% Notation:
-%   "g" corresponds to Γ (interface) in the thesis (using g to avoid Unicode).
+
 
   if nargin ~= 1
     error('extract_subdomain_blocks: expected input (sub).');

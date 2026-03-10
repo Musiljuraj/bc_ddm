@@ -2,20 +2,18 @@
 % File: src/feti_dp/operators/solve_tildeS.m
 % ============================================================
 function out = solve_tildeS(rc, rD, data)
-%SOLVE_TILDES  Apply \widetilde{S}^{-1} to RHS split into primal and delta parts.
-%
-% Output "out" struct:
-%   out.u_c        : coarse vector (nC)
-%   out.wc_local{i}: local primal values on subdomain i (length nC_i)
-%   out.wD         : packed Delta vector (nDeltaProd)
+%SOLVE_TILDES Apply `\widetilde S^{-1}` to the primal/delta right-hand side.
+% Thesis link: Chapter 5.3 (local/coarse solve inside FETI-DP).
+% The routine combines the coarse solve and the delta solve and returns the
+% corresponding primal and delta components needed by FETI-DP operators.
 
-  % FIXED: require data argument (use [] for defaults of rc/rD)
+  %: require data argument (use [] for defaults of rc/rD)
   if nargin < 3
     error('solve_tildeS:argchk', ...
           'solve_tildeS requires rc, rD, and data (use [] for default rc/rD).');
   end
 
-  % ADDED: minimal validation of data struct and required fields
+  %: minimal validation of data struct and required fields
   if ~isstruct(data)
     error('solve_tildeS:badData', 'data must be a struct.');
   end
@@ -43,7 +41,7 @@ function out = solve_tildeS(rc, rD, data)
   nC = data.primal.nC;
   nDeltaProd = data.nDeltaProd;
 
-  % ADDED: validate scalar sizes
+  %: validate scalar sizes
   if ~isnumeric(nC) || ~isscalar(nC) || ~isreal(nC) || ~isfinite(nC) || nC < 0 || fix(nC) ~= nC
     error('solve_tildeS:badData', 'data.primal.nC must be a nonnegative integer scalar.');
   end
@@ -52,17 +50,17 @@ function out = solve_tildeS(rc, rD, data)
     error('solve_tildeS:badData', 'data.nDeltaProd must be a nonnegative integer scalar.');
   end
 
-  % ADDED: validate cell array lengths
+  %: validate cell array lengths
   if numel(data.delta_range) ~= nSub || numel(data.Sdd_R) ~= nSub || ...
      numel(data.Scd) ~= nSub || numel(data.Sdc) ~= nSub
     error('solve_tildeS:badData', 'delta_range/Sdd_R/Scd/Sdc must have one entry per subdomain.');
   end
 
-  % CHANGED: defaults are only via [] (not via missing args)
+  %: defaults are only via [] (not via missing args)
   if isempty(rc); rc = zeros(nC,1); end
   if isempty(rD); rD = zeros(nDeltaProd,1); end
 
-  % ADDED: validate rc, rD
+  % : validate rc, rD
   if ~isnumeric(rc) || ~isreal(rc) || any(~isfinite(rc(:)))
     error('solve_tildeS:badInput', 'rc must be a real, finite numeric vector (or []).');
   end
@@ -80,7 +78,7 @@ function out = solve_tildeS(rc, rD, data)
     error('solve_tildeS:badInput', 'rD must have length nDeltaProd = %d (or be []).', nDeltaProd);
   end
 
-  % ADDED: validate coarse factor if needed
+  % : validate coarse factor if needed
   if nC > 0
     if ~isfield(data,'Kcc_R') || isempty(data.Kcc_R)
       error('solve_tildeS:badData', 'data.Kcc_R is required when nC > 0.');
@@ -94,7 +92,7 @@ function out = solve_tildeS(rc, rD, data)
     end
   end
 
-  % ADDED: validate indexing and operator dimensions; also ensure delta ranges are disjoint
+  % : validate indexing and operator dimensions; also ensure delta ranges are disjoint
   usedDelta = false(max(1,nDeltaProd), 1); % robust for nDeltaProd==0
 
   for i = 1:nSub
@@ -162,7 +160,7 @@ function out = solve_tildeS(rc, rD, data)
 
     nCi = numel(c_ids);
 
-    % FIXED: allow empty [] blocks for localD==0 (primal-only subdomains).
+    % : allow empty [] blocks for localD==0 (primal-only subdomains).
     if localD == 0
       % If provided non-empty, enforce correct "zero-column/zero-row" sizing.
       if ~isempty(Scd) && ~(size(Scd,1) == nCi && size(Scd,2) == 0)

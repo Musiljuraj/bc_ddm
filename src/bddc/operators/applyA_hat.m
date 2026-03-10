@@ -2,10 +2,11 @@
 % File: src/bddc/operators/applyA_hat.m
 % ============================================================
 function y = applyA_hat(x, data)
-%APPLYA_HAT  Apply hat-space operator A = R^T S R.
-%
-%   y = applyA_hat(x, data)
-%
+%APPLYA_HAT Apply the assembled-interface BDDC operator in matrix-free form.
+% Thesis link: Chapter 5.4 and Chapter 6.2 (hat-space operator seen by PCG).
+% The routine evaluates `\hat A x = R^T S R x` without assembling `\hat A`
+% as a global matrix.
+
 % Inputs:
 %   x    : hat-space vector (nHat x 1)
 %   data : problem struct with fields:

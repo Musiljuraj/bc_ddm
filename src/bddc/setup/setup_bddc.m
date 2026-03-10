@@ -1,6 +1,9 @@
 function data = setup_bddc(data, opts)
-%SETUP_BDDC  Precompute BDDC objects for the hat-space interface system.
-%
+%SETUP_BDDC Build the data structures of the sequential BDDC solver.
+% Thesis link: Chapter 5.4 (assembled-interface BDDC formulation).
+% The routine prepares local Schur data, coarse data, scaling, and the
+% callbacks needed by the hat-space PCG iteration.
+% %
 % Input:
 %   data : problem data (struct) with fields: sub, prod, primal
 %   opts : optional struct, supports:
@@ -10,7 +13,7 @@ function data = setup_bddc(data, opts)
 %   data : same struct, extended with data.bddc
 
   %======================================================================
-  %% HARDENING CHANGE: robust opts handling + validation (non-struct, missing fields, bad tol)
+  %%   robust opts handling + validation (non-struct, missing fields, bad tol)
   %======================================================================
   if nargin < 2 || isempty(opts)
     opts = struct();
@@ -26,7 +29,7 @@ function data = setup_bddc(data, opts)
   end
 
   %======================================================================
-  %% HARDENING CHANGE: top-level input validation with explicit error IDs
+  %%   top-level input validation with explicit error IDs
   %======================================================================
   if ~isstruct(data) || ~isfield(data,'sub') || ~isfield(data,'prod') || ~isfield(data,'primal')
     error('setup_bddc:data', 'data must be a struct containing fields sub, prod, primal.');
@@ -52,7 +55,7 @@ function data = setup_bddc(data, opts)
   nC    = primal.nC;
 
   %======================================================================
-  %% HARDENING CHANGE: enforce integer sizes for nProd/nHat/nC
+  %%   enforce integer sizes for nProd/nHat/nC
   %======================================================================
   if ~(isnumeric(nProd) && isscalar(nProd) && nProd >= 0 && floor(nProd) == nProd)
     error('setup_bddc:data', 'prod.nProd must be a nonnegative integer scalar.');
@@ -65,7 +68,7 @@ function data = setup_bddc(data, opts)
   end
 
   %======================================================================
-  %% HARDENING CHANGE: validate dependency outputs (R/omega sizes, omega positivity/finite)
+  %%   validate dependency outputs (R/omega sizes, omega positivity/finite)
   %======================================================================
   R = build_assembly_operator_R(prod);  % expected sparse(nProd,nHat)
   omega = multiplicity_scaling(prod);   % expected (nProd x 1)
@@ -86,7 +89,7 @@ function data = setup_bddc(data, opts)
 
   %======================================================================
   %% Assemble product RHS g_prod
-  %% HARDENING CHANGE: detect out-of-range indices + overlapping prod_idx blocks
+  %%   detect out-of-range indices + overlapping prod_idx blocks
   %======================================================================
   g_prod = zeros(nProd, 1);
   seen = false(max(nProd,1), 1); % overlap detection
@@ -100,7 +103,7 @@ function data = setup_bddc(data, opts)
       continue;
     end
 
-    % HARDENING CHANGE: prod_idx integer + bounds check
+    %   prod_idx integer + bounds check
     if ~(isnumeric(idx) && all(isfinite(idx)) && all(floor(idx) == idx))
       error('setup_bddc:data', 'sub(%d).prod_idx must contain integer indices.', i);
     end
@@ -108,7 +111,7 @@ function data = setup_bddc(data, opts)
       error('setup_bddc:data', 'sub(%d).prod_idx out of range 1..prod.nProd.', i);
     end
 
-    % HARDENING CHANGE: overlap check (product indices should be disjoint)
+    %   overlap check (product indices should be disjoint)
     if any(seen(idx))
       error('setup_bddc:data', 'Overlapping prod_idx detected (product space indices must be disjoint).');
     end
@@ -119,7 +122,7 @@ function data = setup_bddc(data, opts)
     end
     gi = sub(i).g(:);
 
-    % HARDENING CHANGE: length and finiteness check
+    %   length and finiteness check
     if ~(isnumeric(gi) && numel(gi) == numel(idx))
       error('setup_bddc:data', 'sub(%d).g length mismatch with prod_idx.', i);
     end
@@ -132,7 +135,7 @@ function data = setup_bddc(data, opts)
 
   %======================================================================
   %% Factorize local Sdd blocks
-  %% HARDENING CHANGE: validate S shape, idx_c/idx_d/c_ids ranges/disjointness,
+  %%   validate S shape, idx_c/idx_d/c_ids ranges/disjointness,
   %%                   chol with p-flag + optional diagonal shift + informative error
   %======================================================================
   Sdd_R = cell(nSub,1);
@@ -150,7 +153,7 @@ function data = setup_bddc(data, opts)
     end
     Si = sub(i).S;
 
-    % HARDENING CHANGE: S must match prod_idx size
+    %   S must match prod_idx size
     if ~(isnumeric(Si) && size(Si,1) == nGi && size(Si,2) == nGi)
       error('setup_bddc:data', 'sub(%d).S must be size [numel(prod_idx), numel(prod_idx)].', i);
     end
@@ -163,7 +166,7 @@ function data = setup_bddc(data, opts)
     idx_d = sub(i).idx_d(:);
     c_ids = sub(i).c_ids(:);
 
-    % HARDENING CHANGE: local index validation
+    %   local index validation
     if ~(isnumeric(idx_c) && all(isfinite(idx_c)) && all(floor(idx_c) == idx_c))
       error('setup_bddc:data', 'sub(%d).idx_c must be integer indices.', i);
     end
@@ -177,7 +180,7 @@ function data = setup_bddc(data, opts)
       error('setup_bddc:data', 'sub(%d): idx_c and idx_d must be disjoint.', i);
     end
 
-    % HARDENING CHANGE: c_ids validation + range check when nC > 0
+    %   c_ids validation + range check when nC > 0
     if ~(isnumeric(c_ids) && all(isfinite(c_ids)) && all(floor(c_ids) == c_ids))
       error('setup_bddc:data', 'sub(%d).c_ids must be integer coarse ids.', i);
     end
@@ -200,10 +203,10 @@ function data = setup_bddc(data, opts)
 
     Sdd = Si(idx_d, idx_d);
 
-    % HARDENING CHANGE: symmetrize block (guards tiny asymmetry)
+    %   symmetrize block (guards tiny asymmetry)
     Sdd = 0.5 * (Sdd + Sdd');
 
-    % HARDENING CHANGE: chol with p-flag and contextual error
+    %   chol with p-flag and contextual error
     [Rdd, pflag] = chol(Sdd);
     if pflag ~= 0 && opts.tol_chol > 0
       Sdd = Sdd + opts.tol_chol * speye(size(Sdd,1));
@@ -218,7 +221,7 @@ function data = setup_bddc(data, opts)
 
   %======================================================================
   %% Build coarse basis Psi in product space
-  %% HARDENING CHANGE: handle nC==0 gracefully with correct empty shapes
+  %%   handle nC==0 gracefully with correct empty shapes
   %======================================================================
   Psi = sparse(nProd, nC);
 
@@ -281,7 +284,7 @@ function data = setup_bddc(data, opts)
 
   %======================================================================
   %% Coarse matrix K0 = Psi^T S Psi
-  %% HARDENING CHANGE: validate apply_blockdiag_S output, symmetrize K0,
+  %%: validate apply_blockdiag_S output, symmetrize K0,
   %%                   chol with p-flag + optional shift + informative error
   %======================================================================
   if nC > 0
@@ -293,7 +296,7 @@ function data = setup_bddc(data, opts)
     for j = 1:nC
       v = apply_blockdiag_S(sub, Psi(:,j));
 
-      % HARDENING CHANGE: check size/type returned by apply_blockdiag_S
+      %   check size/type returned by apply_blockdiag_S
       if ~(isnumeric(v) && isvector(v) && numel(v) == nProd)
         error('setup_bddc:K0', 'apply_blockdiag_S returned invalid vector size.');
       end
@@ -301,7 +304,7 @@ function data = setup_bddc(data, opts)
       K0(:,j) = full(Psi' * v(:));
     end
 
-    % HARDENING CHANGE: symmetrize K0 (numerical)
+    %   symmetrize K0 (numerical)
     K0 = 0.5 * (K0 + K0');
 
     [R0, pflag] = chol(K0);
@@ -309,7 +312,7 @@ function data = setup_bddc(data, opts)
       K0s = K0 + opts.tol_chol * eye(nC);
       [R0, pflag] = chol(K0s);
       if pflag == 0
-        % HARDENING CHANGE: keep K0 consistent with actual factorization used
+        %   keep K0 consistent with actual factorization used
         K0 = K0s;
       end
     end
@@ -317,7 +320,7 @@ function data = setup_bddc(data, opts)
       error('setup_bddc:chol', 'Coarse matrix K0 is not SPD (chol failed).');
     end
   else
-    % HARDENING CHANGE: explicit empty outputs when nC==0
+    %   explicit empty outputs when nC==0
     K0 = zeros(0,0);
     R0 = [];
   end

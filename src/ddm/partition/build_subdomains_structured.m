@@ -1,19 +1,8 @@
 function [sub, ddm] = build_subdomains_structured(p, t, bnd, nSubX, nSubY)
-%BUILD_SUBDOMAINS_STRUCTURED  Partition a structured unit-square mesh into rectangular subdomains.
-%
-% Link to thesis:
-%   Chapter 3.1.1–3.1.2 (domain decomposition and induced local spaces),
-%   equations (3.1), (3.6)–(3.8).
-%
-% This routine performs only geometric/topological bookkeeping:
-%   - Partition the global element set into subdomains (non-overlapping by elements).
-%   - Construct, for each subdomain, its element index set and its local DOF set.
-%   - Construct local-to-global mapping loc2glob for *free* (non-Dirichlet) DOFs.
-%
-% Important:
-%   Dirichlet nodes (as given by bnd.dirichlet_nodes) are eliminated from the
-%   local DOF sets. The resulting DOFs correspond exactly to the "free" unknowns
-%   in the reduced FEM system of Chapter 2.4.
+%BUILD_SUBDOMAINS_STRUCTURED Build the structured rectangular subdomain partition.
+% Thesis link: Chapter 4.1.1 (non-overlapping decomposition of the domain).
+% The routine assigns mesh entities to subdomains and prepares structured
+% bookkeeping for later local and interface constructions.
 %
 % Inputs:
 %   p     : Np x 2 node coordinates.

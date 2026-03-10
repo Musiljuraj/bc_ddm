@@ -1,15 +1,8 @@
 function F = assemble_load_P1(p, t, f_handle)
-%ASSEMBLE_LOAD_P1  Assemble global load vector for P1 FEM on triangles.
-%
-% Link to thesis:
-%   Chapter 2.3.1 (load vector entries) together with the element-wise sum
-%   f_i = Σ_e ∫_{T_e} φ_i f dx and the assembly concept from Chapter 2.3.3.
-%
-% Theoretical role:
-%   The global vector F represents the linear functional ℓ(v)=∫_Ω v f dx evaluated
-%   at basis functions (for homogeneous Neumann BCs: no boundary term).
-%   Each triangle contributes a local vector f^(e) that is
-%   added to F at the global indices of the triangle vertices.
+%ASSEMBLE_LOAD_P1 Assemble the global P1 load vector on the full mesh.
+% Thesis link: Chapter 3.3–3.4 (discrete Ritz system, assembly, boundary treatment).
+% Each element contributes a local vector from `triP1_load`, which is summed
+% at global node indices. The result is returned before Dirichlet elimination.
 %
 % Input:
 %   p        : N×2 node coordinates (global).
@@ -22,21 +15,6 @@ function F = assemble_load_P1(p, t, f_handle)
 %   1) For each element e, extract vertex coordinates.
 %   2) Compute the local vector f^(e) using triP1_load (centroid quadrature).
 %   3) Add the three local entries into F at indices t(e,:).
-
-% IMPORTANT NOTE: SPARSE ASSEMBLY VIA sparse constructon
-% --------------------------------------------------------------
-% For stiffness matrix assembly we  used sparse triplets (I,J,V).
-% For the load vector (a column vector), we can use an analogous sparse
-% constructor:
-%
-%   F = sparse(I, 1, V, N, 1)
-%
-% where:
-%   - I stores global row indices (node numbers)
-%   - column index is always 1 (because F is N×1)
-%   - V stores the values to be summed at those rows
-%
-% Repeated indices in I are automatically summed, exactly as required by FEM.
 
   % -----------------------------
   % 1) Input validation

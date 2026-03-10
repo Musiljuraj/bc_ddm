@@ -2,13 +2,10 @@
 % File: src/bddc/operators/applyM_bddc.m
 % ============================================================
 function z_hat = applyM_bddc(r_hat, data)
-%APPLYM_BDDC  Apply baseline BDDC preconditioner in hat space.
-%
-%   z_hat = applyM_bddc(r_hat, data)
-%
-% Preconditioner (Chapter 4.4):
-%   M^{-1} = R_D^T (T_sub + T_0) R_D,
-%   R_D = D R with multiplicity scaling D.
+%APPLYM_BDDC Apply the two-level BDDC preconditioner in hat space.
+% Thesis link: Chapter 5.4 and Chapter 6.2 (preconditioned BDDC iteration).
+% The routine combines scaled distribution, local delta correction, coarse
+% correction, and final scaled averaging.
 %
 % Inputs:
 %   r_hat : hat-space residual (nHat x 1)

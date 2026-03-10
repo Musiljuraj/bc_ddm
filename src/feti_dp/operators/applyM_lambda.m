@@ -2,29 +2,21 @@
 % File: src/feti_dp/operators/applyM_lambda.m
 % ============================================================
 function z = applyM_lambda(r, data)
-%APPLYM_LAMBDA  Baseline FETI-DP preconditioner M_lambda^{-1} (multiplier space).
-%
-% z = M_lambda^{-1} r
-%
-% Recipe (directive):
-%   t := Bd^T r
-%   t := D t
-%   u := S_{DeltaDelta} t
-%   u := D u
-%   z := Bd u
-%
-% Here S_{DeltaDelta} is the block-diagonal operator with blocks Sdd{i}.
+%APPLYM_LAMBDA Apply the baseline FETI-DP preconditioner in multiplier space.
+% Thesis link: Chapter 5.3 and Chapter 6.2 (preconditioned FETI-DP iteration).
+% The routine applies scaling, local `S_{\Delta\Delta}` blocks, and `B_d`
+% in the matrix-free preconditioner action `M_lambda^{-1} r`.
 
   % ----------------------------
   % Input validation / hardening
   % ----------------------------
 
-  % ADDED: strict arg-count check
+  %  : strict arg-count check
   if nargin ~= 2
     error('applyM_lambda:badNargin', 'applyM_lambda expects exactly 2 inputs: (r, data).');
   end
 
-  % ADDED: validate r type/value
+  %  : validate r type/value
   if ~isnumeric(r) || islogical(r) || ~isreal(r)
     error('applyM_lambda:badRType', 'r must be a real, non-logical numeric vector.');
   end
@@ -35,7 +27,7 @@ function z = applyM_lambda(r, data)
     error('applyM_lambda:badRFinite', 'r must contain only finite values (no NaN/Inf).');
   end
 
-  % ADDED: validate data struct + required fields
+  %  : validate data struct + required fields
   if ~isstruct(data)
     error('applyM_lambda:badDataType', 'data must be a struct.');
   end
@@ -46,7 +38,7 @@ function z = applyM_lambda(r, data)
     end
   end
 
-  % ADDED: validate operator containers
+  %  : validate operator containers
   if ~isnumeric(data.BdT) || ~isreal(data.BdT)
     error('applyM_lambda:badBdT', 'data.BdT must be a real numeric matrix.');
   end
@@ -66,18 +58,18 @@ function z = applyM_lambda(r, data)
     error('applyM_lambda:badCells', 'data.delta_range and data.Sdd must be cell arrays.');
   end
 
-  % CHANGED: normalize r to column *after* validation
+  %  : normalize r to column *after* validation
   r = r(:);
 
   nSub = numel(data.sub);
 
-  % ADDED: length consistency between sub, delta_range, Sdd
+  %  : length consistency between sub, delta_range, Sdd
   if numel(data.delta_range) ~= nSub || numel(data.Sdd) ~= nSub
     error('applyM_lambda:badSubCount', ...
           'data.delta_range and data.Sdd must have the same length as data.sub.');
   end
 
-  % ADDED: dimension consistency checks for BdT and r
+  %  : dimension consistency checks for BdT and r
   if ndims(data.BdT) ~= 2 || size(data.BdT,2) ~= numel(r)
     error('applyM_lambda:dimMismatchBdT', ...
           'Size mismatch: size(BdT,2) must equal numel(r).');
@@ -86,13 +78,13 @@ function z = applyM_lambda(r, data)
   % 1) t = Bd^T r
   t = data.BdT * r;                          % packed Delta
 
-  % ADDED: DeltaWeights must match packed-Delta size
+  %  : DeltaWeights must match packed-Delta size
   if numel(data.DeltaWeights) ~= numel(t)
     error('applyM_lambda:dimMismatchDeltaWeights', ...
           'Size mismatch: numel(DeltaWeights) must equal size(BdT,1).');
   end
 
-  % ADDED: Bd must map packed-Delta -> lambda space
+  %  : Bd must map packed-Delta -> lambda space
   if ndims(data.Bd) ~= 2 || size(data.Bd,2) ~= numel(t)
     error('applyM_lambda:dimMismatchBd', ...
           'Size mismatch: size(Bd,2) must equal size(BdT,1).');
@@ -104,7 +96,7 @@ function z = applyM_lambda(r, data)
   % 3) u = Sdd * t (blockwise multiply, no solves)
   u = zeros(size(t));
 
-  % ADDED: range checks (integer, in-bounds, no duplicates/overlaps)
+  %  : range checks (integer, in-bounds, no duplicates/overlaps)
   used = false(numel(t), 1);
   for i = 1:nSub
     rng = data.delta_range{i};
@@ -139,7 +131,7 @@ function z = applyM_lambda(r, data)
     end
     used(rng) = true;
 
-    % ADDED: validate local block operator Sdd{i}
+    %  : validate local block operator Sdd{i}
     A = data.Sdd{i};
     if ~isnumeric(A) || islogical(A) || ~isreal(A) || ndims(A) ~= 2
       error('applyM_lambda:badSddType', 'Sdd{%d} must be a real numeric matrix.', i);

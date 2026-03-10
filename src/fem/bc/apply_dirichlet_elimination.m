@@ -1,28 +1,8 @@
 function [Kff, Ff, free_nodes] = apply_dirichlet_elimination(K, F, dirichlet_nodes)
-%APPLY_DIRICHLET_ELIMINATION  Enforce homogeneous Dirichlet BCs by restriction.
-%
-% Link to thesis:
-%   Chapter 2.4.2–2.4.3 (Assembly and restriction of the discrete system).
-%   Corresponds to the block decomposition (2.24)–(2.26) and the reduced system
-%   formulated just on free (non-Dirichlet) degrees of freedom.
-%
-% Theoretical role:
-% In the weak formulation of the Poisson problem with Dirichlet boundary
-% conditions, the solution and test space is restricted to
-%
-%   V = { v in H^1(Ω) | v = 0 on Γ_D }.
-%
-% After discretization with P1 finite elements, this means that the degrees
-% of freedom associated with Dirichlet nodes are fixed (here: u = 0) and
-% therefore must be removed from the discrete system.
-% Reordering the system conceptually gives:
-%
-%   [ K_FF  K_FD ] [ u_F ] = [ F_F ]
-%   [ K_DF  K_DD ] [ u_D ]   [ F_D ]
-%
-% For homogeneous Dirichlet conditions, u_D = 0, and the reduced system (after removing Dirichlet nodes) is:
-%
-%   K_FF * u_F = F_F.
+%APPLY_DIRICHLET_ELIMINATION Restrict the FEM system to free DOFs.
+% Thesis link: Chapter 3.4 (Dirichlet treatment and reduced system).
+% Homogeneous Dirichlet nodes are removed algebraically, yielding `Kff`,
+% `Ff`, and the index set of free nodes
 %
 % Inputs:
 %   K              : N×N global stiffness matrix (assembled on all nodes, no BCs applied yet)
@@ -36,13 +16,6 @@ function [Kff, Ff, free_nodes] = apply_dirichlet_elimination(K, F, dirichlet_nod
 %   1) Build the index set of free nodes as the complement of dirichlet_nodes.
 %   2) Extract Kff = K(free,free) and Ff = F(free).
 %   3) Return reduced system components for the subsequent linear solve.
-
-% SOFTWARE DESIGN NOTES
-% ---------------------
-% - This function does NOT modify K or F in-place.
-% - It performs only index manipulation and submatrix extraction.
-% - This separation mirrors the theoretical idea that Dirichlet BCs restrict
-%   the admissible function space, not the bilinear form itself.
 
   % ------------------------------------------------------------
   % 1) Input validation

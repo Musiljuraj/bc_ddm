@@ -1,11 +1,8 @@
 function [x, stats] = pcg_wrap(applyA, b, tol, maxit, applyM, x0)
-%PCG_WRAP  Thin wrapper around Octave's built-in PCG (function-handle form).
-%
-%   [x, stats] = pcg_wrap(applyA, b, tol, maxit, applyM, x0)
-%
-% Purpose (Chapter 4.2 common infrastructure):
-%   Provide a stable, minimal interface for calling Octave's pcg with
-%   matrix-free operator application.
+%PCG_WRAP Thin wrapper around Octave's `pcg` for matrix-free SPD solves.
+% Thesis link: Chapter 5.2 (common solver infrastructure).
+% The routine standardizes callback-based PCG calls and returns a compact
+% diagnostics structure used in later experiments.
 %
 % Inputs:
 %   applyA : function handle, y = applyA(x). Must represent an SPD operator.
@@ -23,11 +20,7 @@ function [x, stats] = pcg_wrap(applyA, b, tol, maxit, applyM, x0)
 %           - relres : achieved relative residual
 %           - iter   : iteration count
 %           - resvec : residual history (length iter+1)
-%
-% Notes:
-% - No printing is produced by this wrapper.
-% - This wrapper intentionally exposes only the subset needed by later
-%   FETI-DP/BDDC stages in this thesis.
+
 
   if nargin < 4
     error('pcg_wrap: expected at least 4 inputs (applyA, b, tol, maxit).');

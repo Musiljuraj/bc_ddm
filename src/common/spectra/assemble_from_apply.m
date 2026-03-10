@@ -2,21 +2,10 @@
 % File: src/common/spectra/assemble_from_apply.m
 % ============================================================
 function Mat = assemble_from_apply(applyFun, n, opts)
-%ASSEMBLE_FROM_APPLY  Assemble explicit matrix from a matrix-free operator action.
-%
-%   Mat = assemble_from_apply(applyFun, n)
-%   Mat = assemble_from_apply(applyFun, n, opts)
-%
-% Chapter 6 (spectral experiments):
-%   For small test instances we compute the full spectrum of preconditioned
-%   operators. Since the solver implementation is matrix-free, we must first
-%   build explicit matrices from their action on vectors.
-%
-% Definition (standard basis assembly):
-%   Let T: R^n -> R^n be linear, and e_j the j-th unit vector. The matrix
-%   representation of T in the standard basis is assembled column-by-column:
-%
-%     Mat(:, j) = T(e_j) = applyFun(e_j),   j = 1..n.
+%ASSEMBLE_FROM_APPLY Assemble an explicit matrix from a matrix-free callback.
+% Thesis link: Chapter 6.3 (spectral analysis in the matrix-free setting).
+% For small problems, the routine builds the matrix column-by-column from
+% repeated operator applications to standard basis vectors.
 %
 % Inputs:
 %   applyFun : function handle, y = applyFun(x), where x,y are length-n vectors.
@@ -30,11 +19,6 @@ function Mat = assemble_from_apply(applyFun, n, opts)
 % Output:
 %   Mat : explicit n-by-n dense matrix whose j-th column is applyFun(e_j).
 %
-% Notes:
-% - This routine assumes applyFun is (approximately) linear and maps R^n -> R^n.
-% - Assembly cost is n operator applications; this is only feasible for small n.
-% - The assembled matrix matches the implementation exactly (no symbolic derivation).
-
   % ----------------------------
   % Input validation
   % ----------------------------

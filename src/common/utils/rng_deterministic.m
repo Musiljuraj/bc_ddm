@@ -10,32 +10,32 @@ function rng_deterministic(seed)
 %   randn('seed', seed);
 
   if nargin ~= 1
-    error('rng_deterministic:InvalidNargin: expected exactly one input (seed).'); % CHANGED
+    error('rng_deterministic:InvalidNargin: expected exactly one input (seed).');
   end
   if nargout ~= 0
-    error('rng_deterministic:InvalidNargout: no outputs are returned.'); % ADDED
+    error('rng_deterministic:InvalidNargout: no outputs are returned.'); 
   end
 
-  % Conservative hardening: reject non-numeric / logical / complex / non-finite. % ADDED
+  % Conservative hardening: reject non-numeric / logical / complex / non-finite.
   if ~(isnumeric(seed) && isreal(seed) && isscalar(seed))
-    error('rng_deterministic:InvalidSeed: seed must be a real numeric scalar.'); % CHANGED
+    error('rng_deterministic:InvalidSeed: seed must be a real numeric scalar.'); 
   end
   if islogical(seed)
-    error('rng_deterministic:InvalidSeed: logical seeds are not allowed; use an integer numeric type.'); % ADDED
+    error('rng_deterministic:InvalidSeed: logical seeds are not allowed; use an integer numeric type.');
   end
 
-  s = double(seed); % ADDED (normalize for checks + seeding)
+  s = double(seed); %  (normalize for checks + seeding)
 
   if ~isfinite(s)
-    error('rng_deterministic:InvalidSeed: seed must be finite.'); % CHANGED
+    error('rng_deterministic:InvalidSeed: seed must be finite.'); 
   end
   if abs(s) > flintmax
-    error('rng_deterministic:InvalidSeed: seed magnitude too large to be represented exactly as an integer.'); % ADDED
+    error('rng_deterministic:InvalidSeed: seed magnitude too large to be represented exactly as an integer.'); 
   end
   if s ~= fix(s)
-    error('rng_deterministic:InvalidSeed: seed must be an integer-valued scalar.'); % CHANGED
+    error('rng_deterministic:InvalidSeed: seed must be an integer-valued scalar.'); 
   end
 
-  rand('seed', s);   % CHANGED (seed using validated double)
-  randn('seed', s);  % CHANGED
+  rand('seed', s);   %  (seed using validated double)
+  randn('seed', s);  
 end

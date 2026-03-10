@@ -1,11 +1,8 @@
 function sub = assemble_subdomain_matrices_P1(p, t, sub, ddm, f_handle)
-%ASSEMBLE_SUBDOMAIN_MATRICES_P1  Assemble local subdomain stiffness matrices and load vectors (P1).
-%
-% Hardening notes:
-% - Validates p/t/ddm.node2dof strongly (numeric/real/finite/in-range).
-% - Validates sub(i).elems strongly (integer/in-range/unique).
-% - Validates sub(i).glob2loc ONLY for DOFs that occur in sub(i).elems (used DOFs),
-%   to avoid overconstraining upstream bookkeeping for unused entries.
+%ASSEMBLE_SUBDOMAIN_MATRICES_P1 Assemble local FEM matrices on each subdomain.
+% Thesis link: Chapter 4.1.2 and 4.2.1 (local spaces and local systems).
+% The routine forms subdomain-wise stiffness and load data induced by the
+% global P1 discretization.
 
   % -------------------- signature / basic checks --------------------
   if nargin < 4 || nargin > 5

@@ -2,14 +2,10 @@
 % File: src/common/diagnostics/build_problem_data.m
 % ============================================================
 function data = build_problem_data(n, nSubX, nSubY, f_handle)
-%BUILD_PROBLEM_DATA  Build the minimal “data” struct used by Chapter 4 solvers.
-%
-% This is intentionally not a general framework. It is a thin, deterministic
-% wrapper that reuses Chapter 2–3 building blocks to create:
-%   - mesh + global FEM K,F and Dirichlet-reduced Kff,Ff (reference solve)
-%   - subdomain decomposition structs
-%   - interface bookkeeping (iface/prod), primal selection/maps (primal)
-%   - local Schur data per subdomain (explicit S for local splitting)
+%BUILD_PROBLEM_DATA Build the common data structure for Octave experiments.
+% Thesis link: Chapters 3–5 (FEM data, substructuring data, solver data).
+% This routine gathers the model, discretization, and decomposition objects
+% required by the sequential FETI-DP and BDDC workflows.
 %
 % Inputs:
 %   n       : mesh parameter (unit square with (n+1)x(n+1) nodes)
@@ -19,18 +15,17 @@ function data = build_problem_data(n, nSubX, nSubY, f_handle)
 % Output:
 %   data struct with fields used downstream by setup_fetidp and drivers.
 
-  narginchk(3, 4);                                  % ADDED: clear arg-count contract
+  narginchk(3, 4);                                
 
-  validate_pos_int_scalar_(n, 'n');                  % ADDED: input validation
-  validate_pos_int_scalar_(nSubX, 'nSubX');          % ADDED: input validation
-  validate_pos_int_scalar_(nSubY, 'nSubY');          % ADDED: input validation
-
-  if (nSubX * nSubY) < 2                             % ADDED: fail fast on empty-interface config
+  validate_pos_int_scalar_(n, 'n');               
+  validate_pos_int_scalar_(nSubX, 'nSubX');         
+  validate_pos_int_scalar_(nSubY, 'nSubY');          
+  if (nSubX * nSubY) < 2                             
     error('build_problem_data:singleSubdomain', ...
           'build_problem_data requires at least 2 subdomains (nSubX*nSubY >= 2).');
   end
 
-  if mod(n, nSubX) ~= 0 || mod(n, nSubY) ~= 0        % ADDED: enforce stated precondition
+  if mod(n, nSubX) ~= 0 || mod(n, nSubY) ~= 0        
     error('build_problem_data:invalidPartition', ...
           'Structured partition requires nSubX and nSubY to divide n.');
   end
@@ -38,7 +33,7 @@ function data = build_problem_data(n, nSubX, nSubY, f_handle)
   if nargin < 4 || isempty(f_handle)
     f_handle = @(x,y) 1.0;
   else
-    if ~isa(f_handle, 'function_handle')             % ADDED: reject non-handle RHS
+    if ~isa(f_handle, 'function_handle')             
       error('build_problem_data:invalidRHS', ...
             'f_handle must be a function handle f(x,y) or empty.');
     end
@@ -57,7 +52,7 @@ function data = build_problem_data(n, nSubX, nSubY, f_handle)
   nNodes = size(p, 1);
   dirn = bnd.dirichlet_nodes;
   validate_index_vector_(dirn, nNodes, 'bnd.dirichlet_nodes');
-  bnd.dirichlet_nodes = unique(dirn(:));             % CHANGED: canonicalize (avoid duplicates/order noise)
+  bnd.dirichlet_nodes = unique(dirn(:));             
 
   K = assemble_stiffness_P1(p, t);
   F = assemble_load_P1(p, t, f_handle);
@@ -65,7 +60,7 @@ function data = build_problem_data(n, nSubX, nSubY, f_handle)
   % Dirichlet elimination in GLOBAL dof numbering (P1 scalar dofs at nodes)
   [Kff, Ff, free] = apply_dirichlet_elimination(K, F, bnd.dirichlet_nodes);
 
-  if isempty(free)                                   % ADDED: avoid later failures with empty systems
+  if isempty(free)                                   
     error('build_problem_data:emptyFreeDofs', ...
           'Dirichlet elimination produced no free DOFs; increase n.');
   end
@@ -73,7 +68,7 @@ function data = build_problem_data(n, nSubX, nSubY, f_handle)
   data = struct();
   data.p = p;
   data.t = t;
-  data.bnd = bnd;                                    % CHANGED: store validated/canonicalized bnd
+  data.bnd = bnd;                                    
 
   data.K = K;
   data.F = F;
@@ -122,7 +117,7 @@ end
 % ========================= local validation helpers =========================
 % NOTE: These helpers are local to this file only (no project-wide side effects).
 
-function validate_pos_int_scalar_(x, name)            % ADDED
+function validate_pos_int_scalar_(x, name)            
   if ~(isnumeric(x) && isreal(x) && isscalar(x) && isfinite(x))
     error('build_problem_data:invalidInput', ...
           '%s must be a real, finite numeric scalar.', name);
@@ -137,7 +132,7 @@ function validate_pos_int_scalar_(x, name)            % ADDED
   end
 end
 
-function validate_index_vector_(idx, nMax, name)      % ADDED
+function validate_index_vector_(idx, nMax, name)      
   if isempty(idx)
     error('build_problem_data:invalidIndex', ...
           '%s must be a nonempty vector of indices.', name);

@@ -1,31 +1,14 @@
 function fe = triP1_load(xy, f_handle)
-%TRIP1_LOAD  Local load vector on one P1 triangular element (Poisson RHS).
-%
-% Link to thesis:
-%   Chapter 2.3.1 (discrete RHS entries f_i = ∫_Ω φ_i f dx) and the element-wise
-%   decomposition into triangle contributions.
-%
-% Theoretical role:
-%   For one element T_e with local basis {ϕ_1,ϕ_2,ϕ_3}, we define the local element load vector
-%     f^(e)_m = ∫_{T_e} ϕ_m(x) f(x) dx,  m=1,2,3,
-%   and the global load vector is obtained by summing these local contributions
-%   according to mesh connectivity (assembly).
-%
-% Quadrature model:
-%   The element integral is approximated by a centroid one-point rule.
-%   For P1 basis functions, ϕ_m(x_c)=1/3 at the centroid x_c, giving the compact
-%   approximation f^(e) ≈ |T_e| f(x_c) (1/3)[1;1;1].
+%TRIP1_LOAD Assemble the local P1 load vector on one triangle.
+% Thesis link: Chapter 3.3.2 (element-wise load contribution).
+% The routine evaluates the element right-hand side for one triangular
+% P1 element using the chosen quadrature rule.
 %
 % Inputs:
 %   xy       : 3×2 coordinates of triangle vertices. 
 %   f_handle : function handle for the load (force) term f(x,y).
 % Outputs:
 %   fe       : 3×1 local load vector for element T_e.
-%
-% Implementation outline:
-%   1) Compute area(T_e).
-%   2) Evaluate f at the triangle centroid.
-%   3) Form the centroid quadrature-based local vector fe.
 
   % -----------------------------
   % 1) Input validation

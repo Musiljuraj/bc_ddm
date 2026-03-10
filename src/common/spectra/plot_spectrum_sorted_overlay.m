@@ -2,11 +2,9 @@
 % File: src/common/spectra/plot_spectrum_sorted_overlay.m
 % ============================================================
 function fig_path = plot_spectrum_sorted_overlay(eig_feti, eig_bddc, case_id, outdir, opts)
-%PLOT_SPECTRUM_SORTED_OVERLAY  Plot sorted eigenvalues (FETI-DP vs BDDC) and export to PDF.
-%
-% Usage:
-%   fig_path = plot_spectrum_sorted_overlay(eig_feti, eig_bddc, case_id, outdir);
-%   fig_path = plot_spectrum_sorted_overlay(eig_feti, eig_bddc, case_id, outdir, opts);
+%PLOT_SPECTRUM_SORTED_OVERLAY Plot sorted eigenvalues of both methods together.
+% Thesis link: Chapter 6.4 (sorted spectral comparison).
+% Produces the sorted-eigenvalue overlay used in the sequential experiments.
 %
 % Inputs:
 %   eig_feti : vector of eigenvalues for FETI-DP (will be sorted internally)

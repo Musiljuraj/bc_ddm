@@ -2,8 +2,11 @@
 % File: src/feti_dp/setup/setup_fetidp.m
 % ============================================================
 function data = setup_fetidp(data, opts)
-%SETUP_FETIDP  Build all FETI-DP data required for multiplier-space PCG.
-%
+%SETUP_FETIDP Build the data structures of the sequential FETI-DP solver.
+% Thesis link: Chapter 5.3 (FETI-DP multiplier formulation).
+% The routine prepares the multiplier-space operators, local factors,
+% primal/coarse data, and preconditioner ingredients.
+% %
 % Input:
 %   data : struct from build_problem_data (Ch.2–3 pipeline)
 %   opts : optional struct with fields:
@@ -22,7 +25,7 @@ function data = setup_fetidp(data, opts)
   % ----------------------------
   % Input validation / defaults
   % ----------------------------
-  % ADDED: strict nargin handling and opts validation
+  % : strict nargin handling and opts validation
   if nargin < 2 || isempty(opts)
     opts = struct();
   end
@@ -34,7 +37,7 @@ function data = setup_fetidp(data, opts)
     error('setup_fetidp: opts.tol_rank must be a real, finite, nonnegative scalar.');
   end
 
-  % ADDED: data contract checks
+  % : data contract checks
   if ~isstruct(data)
     error('setup_fetidp: data must be a struct.');
   end
@@ -57,7 +60,7 @@ function data = setup_fetidp(data, opts)
     error('setup_fetidp: data.sub must contain at least one subdomain.');
   end
 
-  % ADDED: validate primal fields used by this routine
+  % : validate primal fields used by this routine
   if ~isfield(primal,'delta_idx') || ~isfield(primal,'prod2delta') || ~isfield(primal,'nC')
     error('setup_fetidp: data.primal must contain delta_idx, prod2delta, nC.');
   end
@@ -94,11 +97,11 @@ function data = setup_fetidp(data, opts)
   % ------------------------------------------------------------
   % Delta indices in product space
   % ------------------------------------------------------------
-  % CHANGED: moved delta_idx definition above (validation needs nProd)
+  % : moved delta_idx definition above (validation needs nProd)
   data.delta_idx_prod = delta_idx;
   data.nDeltaProd = numel(delta_idx);
 
-  % ADDED: consistency check between delta_idx (packed order) and prod2delta mapping
+  % : consistency check between delta_idx (packed order) and prod2delta mapping
   if data.nDeltaProd > 0
     mapped = prod2delta(delta_idx);
     if any(mapped < 1) || any(mapped > data.nDeltaProd)
@@ -117,7 +120,7 @@ function data = setup_fetidp(data, opts)
     end
     pid = sub(i).prod_idx_d(:);
 
-    % ADDED: validate prod_idx_d indices before mapping
+    % : validate prod_idx_d indices before mapping
     if ~(isnumeric(pid) && isreal(pid))
       error('setup_fetidp: sub(%d).prod_idx_d must be real numeric indices.', i);
     end
@@ -136,7 +139,7 @@ function data = setup_fetidp(data, opts)
     else
       dr = prod2delta(pid);
 
-      % ADDED: disallow primal indices inside prod_idx_d (mapping to 0)
+      % : disallow primal indices inside prod_idx_d (mapping to 0)
       if any(dr == 0)
         error('setup_fetidp: sub(%d).prod_idx_d contains non-Delta (primal) product indices (prod2delta==0).', i);
       end
@@ -162,7 +165,7 @@ function data = setup_fetidp(data, opts)
     end
     S = sub(i).S;
 
-    % ADDED: validate S is square and finite real
+    % : validate S is square and finite real
     if ~(isnumeric(S) && isreal(S))
       error('setup_fetidp: sub(%d).S must be a real numeric matrix.', i);
     end
@@ -174,7 +177,7 @@ function data = setup_fetidp(data, opts)
     end
     nGamma = size(S,1);
 
-    % ADDED: validate idx_c/idx_d exist and are indices
+    % : validate idx_c/idx_d exist and are indices
     if ~isfield(sub(i),'idx_c') || ~isfield(sub(i),'idx_d')
       error('setup_fetidp: sub(%d) missing idx_c/idx_d (run build_primal_maps / interface split).', i);
     end
@@ -193,7 +196,7 @@ function data = setup_fetidp(data, opts)
     if any(idx_c < 1) || any(idx_c > nGamma) || any(idx_d < 1) || any(idx_d > nGamma)
       error('setup_fetidp: sub(%d).idx_c/idx_d entries out of range for S.', i);
     end
-    % ADDED: enforce disjointness of primal and delta local index sets
+    % : enforce disjointness of primal and delta local index sets
     if ~isempty(intersect(idx_c, idx_d))
       error('setup_fetidp: sub(%d).idx_c and idx_d must be disjoint.', i);
     end
@@ -215,7 +218,7 @@ function data = setup_fetidp(data, opts)
     else
       data.Sdd{i} = S(idx_d, idx_d);
 
-      % CHANGED: keep original chol(full()) approach, but validate failure clearly
+      % : keep original chol(full()) approach, but validate failure clearly
       [R,pflag] = chol(full(data.Sdd{i}));
       if pflag ~= 0
         error('setup_fetidp: Sdd is not SPD on subdomain %d (pflag=%d).', i, pflag);
@@ -227,7 +230,7 @@ function data = setup_fetidp(data, opts)
   % ------------------------------------------------------------
   % Build reduced jump operator Bd on Delta space, then row-reduce to full row rank
   % ------------------------------------------------------------
-  % ADDED: dependency checks (fail fast with a clear message)
+  % : dependency checks (fail fast with a clear message)
   if exist('build_jump_operator_B','file') ~= 2
     error('setup_fetidp: build_jump_operator_B not found on path.');
   end
@@ -246,7 +249,7 @@ function data = setup_fetidp(data, opts)
     d = abs(diag(Rq));
     r = sum(d > opts.tol_rank);
 
-    % ADDED: guard r bounds (defensive)
+    % : guard r bounds (defensive)
     r = max(0, min(r, size(Bd_full,1)));
 
     if isvector(E)
@@ -273,7 +276,7 @@ function data = setup_fetidp(data, opts)
   % ------------------------------------------------------------
   omega_prod = multiplicity_scaling(prod);
 
-  % ADDED: validate omega_prod indexing and positivity
+  % : validate omega_prod indexing and positivity
   if ~(isnumeric(omega_prod) && isreal(omega_prod)) || any(~isfinite(omega_prod(:)))
     error('setup_fetidp: multiplicity_scaling(prod) must return a finite real numeric vector.');
   end
@@ -293,7 +296,7 @@ function data = setup_fetidp(data, opts)
   hc = zeros(nC,1);
 
   for i = 1:nSub
-    % ADDED: validate c_ids exists if idx_c is used (assembly correctness)
+    % : validate c_ids exists if idx_c is used (assembly correctness)
     if ~isfield(sub(i),'c_ids')
       error('setup_fetidp: sub(%d).c_ids missing (run build_primal_maps).', i);
     end
@@ -312,7 +315,7 @@ function data = setup_fetidp(data, opts)
       error('setup_fetidp: sub(%d).c_ids out of range 1..nC.', i);
     end
 
-    % ADDED: require c_ids length consistent with idx_c (common contract)
+    % : require c_ids length consistent with idx_c (common contract)
     if numel(c_ids) ~= numel(sub(i).idx_c(:))
       error('setup_fetidp: sub(%d) mismatch: numel(c_ids) must equal numel(idx_c).', i);
     end
@@ -330,7 +333,7 @@ function data = setup_fetidp(data, opts)
     end
     gi = sub(i).g(:);
 
-    % ADDED: validate g length consistent with S (local gamma ordering)
+    % : validate g length consistent with S (local gamma ordering)
     if ~(isnumeric(gi) && isreal(gi)) || any(~isfinite(gi))
       error('setup_fetidp: sub(%d).g must be finite real numeric.', i);
     end

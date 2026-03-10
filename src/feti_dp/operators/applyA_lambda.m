@@ -2,110 +2,105 @@
 % File: src/feti_dp/operators/applyA_lambda.m
 % ============================================================
 function y = applyA_lambda(x, data)
-%APPLYA_LAMBDA  Matrix-free application of the reduced SPD operator A_lambda.
-%
-% y = A_lambda * x
-%
-% Operational form:
-%   1) t = Bd^T x
-%   2) wD = [ \tilde S^{-1} (0, t) ]_Delta
-%   3) y = Bd * wD
-
+%APPLYA_LAMBDA Apply the FETI-DP multiplier-space operator in matrix-free form.
+% Thesis link: Chapter 5.3 and Chapter 6.2 (FETI-DP operator seen by PCG).
+% The routine evaluates `A_lambda x` using `B_d^T`, `\tilde S^{-1}`, and `B_d`
+% without assembling the global multiplier-space matrix explicitly.
   % ----------------------------
   % Input validation
   % ----------------------------
-  if nargin ~= 2                                         % ADDED
-    error('applyA_lambda:InvalidNumArgs', ...             % ADDED
-          'Expected exactly 2 input arguments.');         % ADDED
-  end                                                     % ADDED
+  if nargin ~= 2                                          
+    error('applyA_lambda:InvalidNumArgs', ...              
+          'Expected exactly 2 input arguments.');          
+  end                                                      
 
   % Validate x
-  if ~isnumeric(x) || islogical(x)                        % ADDED
-    error('applyA_lambda:InvalidXType', ...               % ADDED
-          'x must be a non-logical numeric vector.');     % ADDED
-  end                                                     % ADDED
-  if ~isreal(x)                                           % ADDED
-    error('applyA_lambda:InvalidXReal', ...               % ADDED
-          'x must be real-valued.');                      % ADDED
-  end                                                     % ADDED
-  if ~isvector(x)                                         % ADDED
-    error('applyA_lambda:InvalidXShape', ...              % ADDED
-          'x must be a vector.');                         % ADDED
-  end                                                     % ADDED
+  if ~isnumeric(x) || islogical(x)                         
+    error('applyA_lambda:InvalidXType', ...                
+          'x must be a non-logical numeric vector.');      
+  end                                                      
+  if ~isreal(x)                                            
+    error('applyA_lambda:InvalidXReal', ...                
+          'x must be real-valued.');                       
+  end                                                      
+  if ~isvector(x)                                          
+    error('applyA_lambda:InvalidXShape', ...               
+          'x must be a vector.');                          
+  end                                                      
 
-  x = x(:);                                               % CHANGED (kept behavior; now after checks)
+  x = x(:);                                               
 
-  if any(~isfinite(x))                                    % ADDED
-    error('applyA_lambda:InvalidXFinite', ...             % ADDED
-          'x must contain only finite values.');          % ADDED
-  end                                                     % ADDED
+  if any(~isfinite(x))                                     
+    error('applyA_lambda:InvalidXFinite', ...              
+          'x must contain only finite values.');           
+  end                                                      
 
   % Validate data
-  if ~isstruct(data)                                      % ADDED
-    error('applyA_lambda:InvalidDataType', ...            % ADDED
-          'data must be a struct.');                      % ADDED
-  end                                                     % ADDED
-  if ~isfield(data, 'BdT') || ~isfield(data, 'Bd')         % ADDED
-    error('applyA_lambda:MissingDataFields', ...          % ADDED
-          'data must contain fields BdT and Bd.');        % ADDED
-  end                                                     % ADDED
+  if ~isstruct(data)                                       
+    error('applyA_lambda:InvalidDataType', ...             
+          'data must be a struct.');                       
+  end                                                      
+  if ~isfield(data, 'BdT') || ~isfield(data, 'Bd')          
+    error('applyA_lambda:MissingDataFields', ...           
+          'data must contain fields BdT and Bd.');         
+  end                                                      
 
-  BdT = data.BdT;                                         % ADDED
-  Bd  = data.Bd;                                          % ADDED
+  BdT = data.BdT;                                          
+  Bd  = data.Bd;                                           
 
-  if ~isnumeric(BdT) || islogical(BdT)                    % ADDED
-    error('applyA_lambda:InvalidBdTType', ...             % ADDED
-          'data.BdT must be a numeric matrix/operator.'); % ADDED
-  end                                                     % ADDED
-  if ~isnumeric(Bd) || islogical(Bd)                      % ADDED
-    error('applyA_lambda:InvalidBdType', ...              % ADDED
-          'data.Bd must be a numeric matrix/operator.');  % ADDED
-  end                                                     % ADDED
+  if ~isnumeric(BdT) || islogical(BdT)                     
+    error('applyA_lambda:InvalidBdTType', ...              
+          'data.BdT must be a numeric matrix/operator.');  
+  end                                                      
+  if ~isnumeric(Bd) || islogical(Bd)                       
+    error('applyA_lambda:InvalidBdType', ...               
+          'data.Bd must be a numeric matrix/operator.');   
+  end                                                      
 
-  nLambda = numel(x);                                     % ADDED
-  if size(BdT, 2) ~= nLambda                              % ADDED
-    error('applyA_lambda:DimMismatchBdT', ...             % ADDED
-          'Size mismatch: BdT must have size(*,%d).', nLambda); % ADDED
-  end                                                     % ADDED
-  nDelta = size(BdT, 1);                                  % ADDED
-  if size(Bd, 2) ~= nDelta                                % ADDED
-    error('applyA_lambda:DimMismatchBd', ...              % ADDED
-          'Size mismatch: Bd must have size(*,%d).', nDelta);   % ADDED
-  end                                                     % ADDED
-  if size(Bd, 1) ~= nLambda                               % ADDED
-    error('applyA_lambda:DimMismatchOutput', ...          % ADDED
-          'Size mismatch: Bd must have %d rows to match x.', nLambda); % ADDED
-  end                                                     % ADDED
+  nLambda = numel(x);                                      
+  if size(BdT, 2) ~= nLambda                               
+    error('applyA_lambda:DimMismatchBdT', ...              
+          'Size mismatch: BdT must have size(*,%d).', nLambda);  
+  end                                                      
+  nDelta = size(BdT, 1);                                   
+  if size(Bd, 2) ~= nDelta                                 
+    error('applyA_lambda:DimMismatchBd', ...               
+          'Size mismatch: Bd must have size(*,%d).', nDelta);    
+  end                                                      
+  if size(Bd, 1) ~= nLambda                                
+    error('applyA_lambda:DimMismatchOutput', ...           
+          'Size mismatch: Bd must have %d rows to match x.', nLambda);  
+  end                                                      
 
-  if exist('solve_tildeS', 'file') ~= 2                   % ADDED
-    error('applyA_lambda:MissingDependency', ...          % ADDED
-          'Required function solve_tildeS is not on the path.'); % ADDED
-  end                                                     % ADDED
+  if exist('solve_tildeS', 'file') ~= 2                    
+    error('applyA_lambda:MissingDependency', ...          
+          'Required function solve_tildeS is not on the path.'); 
+  end                                                    
 
   % ----------------------------
   % Core computation
   % ----------------------------
-  t = BdT * x;                                            % CHANGED (use local BdT)
-  out = solve_tildeS([], t, data);                        % unchanged call convention
+  t = BdT * x;                                            
+  out = solve_tildeS([], t, data);                        
 
-  if ~isstruct(out) || ~isfield(out, 'wD')                % ADDED
-    error('applyA_lambda:InvalidSolveOutput', ...         % ADDED
-          'solve_tildeS must return a struct with field wD.'); % ADDED
-  end                                                     % ADDED
-  wD = out.wD;                                            % ADDED
-  if ~isnumeric(wD) || islogical(wD)                      % ADDED
-    error('applyA_lambda:InvalidWDType', ...              % ADDED
-          'solve_tildeS output wD must be numeric.');     % ADDED
-  end                                                     % ADDED
-  if ~isvector(wD) || numel(wD) ~= nDelta                 % ADDED
-    error('applyA_lambda:InvalidWDShape', ...             % ADDED
-          'solve_tildeS output wD must be a vector of length %d.', nDelta); % ADDED
-  end                                                     % ADDED
-  wD = wD(:);                                             % ADDED
-  if ~isreal(wD) || any(~isfinite(wD))                    % ADDED
-    error('applyA_lambda:InvalidWDValues', ...            % ADDED
-          'solve_tildeS output wD must be real and finite.'); % ADDED
-  end                                                     % ADDED
+  if ~isstruct(out) || ~isfield(out, 'wD')                
+    error('applyA_lambda:InvalidSolveOutput', ...         
+          'solve_tildeS must return a struct with field wD.'); 
+  end                                                     
+  wD = out.wD;                                         
+  if ~isnumeric(wD) || islogical(wD)                      
+    error('applyA_lambda:InvalidWDType', ...              
+          'solve_tildeS output wD must be numeric.');     
+  end                                                     
+  if ~isvector(wD) || numel(wD) ~= nDelta                 
+    error('applyA_lambda:InvalidWDShape', ...             
+          'solve_tildeS output wD must be a vector of length %d.', nDelta);
+  end                                                     
+  wD = wD(:);                                             
+  if ~isreal(wD) || any(~isfinite(wD))               
+    error('applyA_lambda:InvalidWDValues', ...         
+          'solve_tildeS output wD must be real and finite.'); 
+  end                                                     %
 
-  y = Bd * wD;                                            % CHANGED (use local Bd, validated wD)
+  y = Bd * wD;                                           
 end

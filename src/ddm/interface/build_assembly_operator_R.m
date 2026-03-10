@@ -1,13 +1,7 @@
 function R = build_assembly_operator_R(prod)
-%BUILD_ASSEMBLY_OPERATOR_R  Build the assembly (distribution) operator R: \hat{W} -> W.
-%
-% Link to thesis:
-%   Chapter 3.3.3, equation (3.48).
-%
-% For an assembled interface vector \hat{w} (single-valued per physical interface DOF),
-% the product representation w = R * \hat{w} duplicates values to all local copies.
-% R has entries 0/1 and exactly one '1' per product row:
-%   w(p) = \hat{w}( prod.prod2hat(p) ).
+%BUILD_ASSEMBLY_OPERATOR_R Build the assembly/distribution operator `R`.
+% Thesis link: Chapter 4.3.1 and 4.3.3 (assembled vs. product interface space).
+% The operator maps assembled interface vectors to their product-space copies.
 %
 % Inputs:
 %   prod : product-space bookkeeping with fields:

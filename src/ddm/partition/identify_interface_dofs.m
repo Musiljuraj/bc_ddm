@@ -1,14 +1,7 @@
 function [sub, iface] = identify_interface_dofs(sub, ddm)
-%IDENTIFY_INTERFACE_DOFS  Identify interior/interface DOFs per subdomain and global interface bookkeeping.
-%
-% Link to thesis:
-%   Chapter 3.1.3 (interior vs interface DOFs), equation (3.10).
-%
-% Discrete interpretation used here (robust for FE meshes):
-%   - A *free* global DOF is considered an interface DOF if it appears in the
-%     local DOF sets of at least two subdomains (i.e., it is shared).
-%   - All other free DOFs are treated as "interior" with respect to the
-%     interface reduction (they do not couple multiple subdomains).
+%IDENTIFY_INTERFACE_DOFS Identify interior and interface DOFs of each subdomain.
+% Thesis link: Chapter 4.1.3 (interior/interface splitting).
+% This routine classifies local unknowns for later Schur complement reduction.
 %
 % Inputs:
 %   sub : subdomain struct array from build_subdomains_structured (must contain .loc2glob).
