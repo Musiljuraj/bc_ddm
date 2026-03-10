@@ -35,7 +35,7 @@ function out = ch6_run_case(cfg)
 %
 % Notes:
 % - By default we do NOT store the full base/data structs to keep .mat small.
-% - FETI-DP is always processed first, BDDC second (as required).
+% - FETI-DP is always processed first, BDDC second.
 
   % ----------------------------
   % cfg defaults + validation

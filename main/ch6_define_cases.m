@@ -81,7 +81,7 @@ function cases = ch6_define_cases()
   cases(k).seed  = seed;
 
   % ============================================================
-  % Set B: weak-scaling-like hint (spectra may be skipped)
+  % Set B: weak-scaling-like hint
   % ============================================================
 
   % B1: weak-scaling-like larger case
