@@ -1,0 +1,5 @@
+Laptop: Intel Core Ultra 9 185H, 64 GB RAM
+System: Windows laptop with WSL2 Ubuntu
+PETSc version: 3.24.5
+Example used: src/ksp/ksp/tutorials/ex59.c
+PETSc build: arch-thesis-opt

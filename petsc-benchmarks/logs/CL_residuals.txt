@@ -1,0 +1,26 @@
+  Residual norms for physical_ solve.
+  0 KSP preconditioned resid norm 2.399109670416e+03 true resid norm 5.140339683182e+03 ||r(i)||/||b|| 7.851893898012e-02
+  1 KSP preconditioned resid norm 2.024072700479e+03 true resid norm 1.512125271775e+02 ||r(i)||/||b|| 2.309778716245e-03
+  2 KSP preconditioned resid norm 1.896009304135e+02 true resid norm 1.413069402148e+01 ||r(i)||/||b|| 2.158470393016e-04
+  3 KSP preconditioned resid norm 3.421262132940e+01 true resid norm 3.348509938958e+00 ||r(i)||/||b|| 5.114865238023e-05
+  4 KSP preconditioned resid norm 5.503540703750e+00 true resid norm 4.771298051889e-01 ||r(i)||/||b|| 7.288181009087e-06
+  5 KSP preconditioned resid norm 6.028999646818e-01 true resid norm 4.826312304932e-02 ||r(i)||/||b|| 7.372215548515e-07
+  Linear physical_ solve converged due to CONVERGED_RTOL iterations 5
+---------------------BDDC stats-------------------------------
+Number of degrees of freedom               :   147840
+Eigenvalues preconditioned operator        : 1.0e+00 2.2e+00
+--------------------------------------------------------------
+  Residual norms for fluxes_ solve.
+  0 KSP none resid norm 1.210659701216e+02 true resid norm 1.154461173991e+03 ||r(i)||/||b|| 1.763445065160e-02
+  1 KSP none resid norm 1.490574320861e+01 true resid norm 2.668281208685e+02 ||r(i)||/||b|| 4.075812540017e-03
+  2 KSP none resid norm 3.931714825879e+00 true resid norm 5.526684298945e+01 ||r(i)||/||b|| 8.442037179976e-04
+  3 KSP none resid norm 4.089506910915e-01 true resid norm 6.210653257345e+00 ||r(i)||/||b|| 9.486803094661e-05
+  4 KSP none resid norm 8.551774155210e-02 true resid norm 2.118458121887e+00 ||r(i)||/||b|| 3.235955097454e-05
+  5 KSP none resid norm 1.666914014314e-02 true resid norm 3.319635131342e-01 ||r(i)||/||b|| 5.070758828778e-06
+  6 KSP none resid norm 1.390691331369e-03 true resid norm 3.131472704706e-02 ||r(i)||/||b|| 4.783339805796e-07
+  7 KSP none resid norm 3.460834443432e-04 true resid norm 5.305547050664e-03 ||r(i)||/||b|| 8.104248956353e-08
+  Linear fluxes_ solve converged due to CONVERGED_RTOL iterations 7
+------------------FETI-DP stats-------------------------------
+Number of degrees of freedom               :     2277
+Eigenvalues preconditioned operator        : 1.0e+00 2.5e+00
+--------------------------------------------------------------

@@ -1,0 +1,20 @@
+Benchmark matrix for PETSc ex59, 2D, p=2
+
+Meaning:
+2x2, 4x2, 4x4 = subdomain layouts
+S = 16, M = 32, L = 48 = local elements per subdomain edge
+
+Layout A (2x2, n=4):
+A-S: -npx 2 -npy 2 -nex 32  -ney 32
+A-M: -npx 2 -npy 2 -nex 64  -ney 64
+A-L: -npx 2 -npy 2 -nex 96  -ney 96
+
+Layout B (4x2, n=8):
+B-S: -npx 4 -npy 2 -nex 64  -ney 32
+B-M: -npx 4 -npy 2 -nex 128 -ney 64
+B-L: -npx 4 -npy 2 -nex 192 -ney 96
+
+Layout C (4x4, n=16):
+C-S: -npx 4 -npy 4 -nex 64  -ney 64
+C-M: -npx 4 -npy 4 -nex 128 -ney 128
+C-L: -npx 4 -npy 4 -nex 192 -ney 192
